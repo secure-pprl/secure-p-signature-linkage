@@ -23,3 +23,6 @@ $(LIB): $(LIB_OBJS)
 # remove $LIBSEAL_PATH from this command
 $(EXE): $(LIB) $(EXE_OBJS)
 	$(CXX) -o $(EXE) $(EXE_OBJS) -Wl,-rpath=. $(LIB) $(LDFLAGS) $(LIBSEAL_PATH)
+
+keygen: $(LIB) keygen.o
+	$(CXX) -o keygen keygen.o -Wl,-rpath=. $(LIB) $(LDFLAGS) $(LIBSEAL_PATH)
