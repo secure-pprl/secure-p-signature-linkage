@@ -68,6 +68,15 @@ int main() {
     int plain_mod = 40961;
     EncryptionParameters params(scheme_type::BFV);
 
+    // FIXME: SEAL's PRNG system is at best misleading; if we specify
+    // a seed here, then the same PRNG starting at that seed will be
+    // used at several different points. OTOH, there's no way to read
+    // off the seed that they use if it's just generated
+    // randomly. Might need to derive my own PRNG for deployment.
+    uint64_t seed[2] = { 0, 0 };
+    params.set_random_generator(
+        std::make_shared<FastPRNGFactory>(seed[0], seed[1]));
+
     params.set_poly_modulus_degree(poldeg);
     params.set_coeff_modulus(DefaultParams::coeff_modulus_128(poldeg));
     params.set_plain_modulus(plain_mod);
