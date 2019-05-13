@@ -1,5 +1,6 @@
 #include <cassert>
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <random>
 #include <algorithm>
@@ -192,6 +193,19 @@ void check_result(string pre,
     }
 }
 
+std::vector<char>
+read_file(const char *fname) {
+    std::ifstream file(fname, std::ios::binary | std::ios::ate);
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<char> buffer(size);
+    if ( ! file.read(buffer.data(), size)) {
+        // throw exception
+    }
+    return buffer;
+}
+
 int main(int argc, char *argv[]) {
     if (argc > 1) {
         int thds = atoi(argv[1]);
@@ -204,42 +218,59 @@ int main(int argc, char *argv[]) {
     }
     cout << "Using " << NTHREADS << "/"
             << thread::hardware_concurrency() << " threads" << endl;
-    //int poldeg = 2048;
-    //int plain_mod = 12289;
+
     int poldeg = 4096;
-    int plain_mod = 40961;
-    EncryptionParameters parms(scheme_type::BFV);
-
-    parms.set_poly_modulus_degree(poldeg);
-    parms.set_coeff_modulus(DefaultParams::coeff_modulus_128(poldeg));
-    parms.set_plain_modulus(plain_mod);
-
-    auto context = SEALContext::Create(parms);
-    print_parameters(context);
-
-    auto qualifiers = context->context_data()->qualifiers();
-    cout << "Batching enabled: " << boolalpha << qualifiers.using_batching << endl;
-
-    KeyGenerator keygen(context);
-    auto public_key = keygen.public_key();
-    auto secret_key = keygen.secret_key();
-
-    int relin_key_bits = 30;
-    auto relin_keys = keygen.relin_keys(relin_key_bits);
-
-    int galois_key_bits = 30;
-    auto galois_keys = keygen.galois_keys(galois_key_bits);
-
-    Encryptor encryptor(context, public_key);
-    Evaluator evaluator(context);
-    Decryptor decryptor(context, secret_key);
-
-    BatchEncoder batch_encoder(context);
-
     int nclks = poldeg / 2;
     int clksz = 512;
-    vector<CLK> clks;
-    generate_clks(clks, nclks, clksz);
+
+    char *Linmat = new char[nclks * clksz];
+    for (int i = 0; i < nclks * clksz; ++i) {
+        Linmat[i] = (i*17 % 31) & 1;
+    }
+    char *Rinmat = Linmat;
+    int nrows = nclks;
+    int ncols = clksz;
+    int eltbytes = 1;
+
+    char *output = new char[nclks * 2];
+
+    vector<char> vpubkey = read_file("public-key");
+    vector<char> vseckey = read_file("secret-key");
+    vector<char> vgalkeys = read_file("galois-keys");
+
+    const char *pubkey = vpubkey.data();
+    int pubkeybytes = vpubkey.size();
+    const char *seckey = vseckey.data();
+    int seckeybytes = vseckey.size();
+    const char *galkeys = vgalkeys.data();
+    int galkeysbytes = vgalkeys.size();
+
+    seclink_ctx_t ctx;
+    seclink_init_ctx(&ctx);
+
+    seclink_emat_t left, right, prod;
+
+    cout << "encrypting left..." << endl;
+    seclink_encrypt_left(ctx, &left, Linmat, nrows, ncols, eltbytes, pubkey, pubkeybytes);
+    cout << "encrypting right..." << endl;
+    // FIXME: Something wrong with transposes here
+    seclink_encrypt_right(ctx, &right, Rinmat, 2, ncols, eltbytes, pubkey, pubkeybytes);
+
+    cout << "multiplying..." << endl;
+    seclink_multiply(ctx, &prod, left, right, galkeys, galkeysbytes);
+
+    cout << "decrypting..." << endl;
+    seclink_decrypt(ctx, output, 2, ncols, eltbytes, prod, seckey, seckeybytes);
+
+    cout << "cleaning up..." << endl;
+    seclink_clear_ctx(ctx);
+    seclink_clear_emat(left);
+    seclink_clear_emat(right);
+    seclink_clear_emat(prod);
+    delete[] Linmat;
+    delete[] output;
+
+#if 0
     vector<int64_t> expected = mat_vec_prod(clks);
 
     vector<Plaintext> lhs_ptxts =
@@ -315,5 +346,6 @@ int main(int argc, char *argv[]) {
     // cout << endl;
     // noise_test(4096);
 
+#endif
     return 0;
 }

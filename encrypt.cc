@@ -122,8 +122,10 @@ make_clks(
             const char *begin = mat + (i * ncols + j) * eltbytes;
             std::memset(valbuf, 0, BUFBYTES);
             std::memcpy(valbuf, begin, eltbytes);
-            imemstream buf(begin, 8);
-            std::int64_t val;
+            imemstream buf(begin, BUFBYTES);
+            // FIXME: Can't read int64_t from an imemstream for some reason!
+            //std::int64_t val;
+            char val;
             buf >> val;
             clks[i][j] = val;
         }

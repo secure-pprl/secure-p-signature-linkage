@@ -1,9 +1,10 @@
 #include "common.h"
 
 void seclink_init_ctx(seclink_ctx_t *ctx) {
-    // FIXME: these should be read in from elsewhere
+    // TODO: these should be read in from elsewhere
     int poldeg = 4096;
     int plain_mod = 40961;
+    // TODO: use EncryptionParameters::parms_id()
     seal::EncryptionParameters params(seal::scheme_type::BFV);
 
     params.set_poly_modulus_degree(poldeg);

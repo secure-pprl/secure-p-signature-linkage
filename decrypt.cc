@@ -1,9 +1,11 @@
 #include "common.h"
 
 static std::vector<seal::Plaintext>
-decrypt_all(const seclink_ctx_t ctx,
-        const seclink_emat_t inmat,
-        const char *seckey, int seckeybytes) {
+decrypt_all(
+    const seclink_ctx_t ctx,
+    const seclink_emat_t inmat,
+    const char *seckey, int seckeybytes)
+{
     imemstream in(seckey, seckeybytes);
     seal::SecretKey key;
     key.load(ctx->context, in);
@@ -18,16 +20,14 @@ decrypt_all(const seclink_ctx_t ctx,
     return ptxts;
 }
 
-void seclink_decrypt_left(const seclink_ctx_t ctx,
-        void *outmat, int nrows, int ncols, int eltbytes,
-        const seclink_emat_t inmat,
-        const char *seckey, int seckeybytes) {
+void
+seclink_decrypt(
+    const seclink_ctx_t ctx,
+    void *outmat, int nrows, int ncols, int eltbytes,
+    const seclink_emat_t inmat,
+    const char *seckey, int seckeybytes)
+{
     auto ptxts = decrypt_all(ctx, inmat, seckey, seckeybytes);
-}
-
-void seclink_decrypt_right(const seclink_ctx_t ctx,
-        void *outmat, int nrows, int ncols, int eltbytes,
-        const seclink_emat_t inmat,
-        const char *seckey, int seckeybytes) {
-    auto ptxts = decrypt_all(ctx, inmat, seckey, seckeybytes);
+    // FIXME: copy ptxts into outmat
+    std::memset(outmat, 0, nrows * ncols * eltbytes);
 }
