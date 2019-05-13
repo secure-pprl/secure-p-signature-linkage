@@ -6,7 +6,7 @@ CXXFLAGS += $(DBGFLAGS) -Wall -Wextra -pedantic -std=gnu++17 -fPIC -DPIC -fopenm
 #CPPFLAGS = -Ipath/to/seal.h
 LDFLAGS = -fopenmp -pthread
 
-LIB_OBJS = encrypt.o multiply.o secure-linkage.o
+LIB_OBJS = encrypt.o decrypt.o multiply.o
 LIB = libseclink.so
 EXE_OBJS = secure-linkage.o
 EXE = secure-linkage
@@ -19,5 +19,7 @@ clean:
 $(LIB): $(LIB_OBJS)
 	$(CXX) -shared -o $(LIB) $(LIB_OBJS) $(LDFLAGS) $(LIBSEAL_PATH)
 
+# TODO: all the libseal stuff should be accessed via libseclink.so, so
+# remove $LIBSEAL_PATH from this command
 $(EXE): $(LIB) $(EXE_OBJS)
-	$(CXX) -o $(EXE) $(EXE_OBJS) -Wl,-rpath=. $(LIB) $(LDFLAGS)
+	$(CXX) -o $(EXE) $(EXE_OBJS) -Wl,-rpath=. $(LIB) $(LDFLAGS) $(LIBSEAL_PATH)
