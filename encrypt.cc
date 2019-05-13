@@ -74,3 +74,87 @@ clks_to_right_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     // FIXME: Handle last CLK
     return ptxts;
 }
+
+
+static seal::Encryptor
+get_encryptor(
+    const seclink_ctx_t ctx,
+    const char *pubkey, int pubkeybytes)
+{
+    imemstream in(pubkey, pubkeybytes);
+    seal::PublicKey pkey;
+    pkey.load(ctx->context, in);
+    return seal::Encryptor(ctx->context, pkey);
+}
+
+
+static std::vector<seal::Ciphertext>
+encrypt_all(
+    const seclink_ctx_t ctx,
+    const std::vector<seal::Plaintext> &ptxts,
+    const char *pubkey, int pubkeybytes)
+{
+    seal::Encryptor encryptor = get_encryptor(ctx, pubkey, pubkeybytes);
+    std::vector<seal::Ciphertext> res;
+    for (auto &ptxt : ptxts) {
+        seal::Ciphertext ctxt;
+        encryptor.encrypt(ptxt, ctxt);
+        res.push_back(ctxt);
+    }
+    return res;
+}
+
+
+static std::vector<CLK>
+make_clks(
+    const void *inmat, int nrows, int ncols, int eltbytes)
+{
+    static constexpr int BUFBYTES = 8;
+    char valbuf[BUFBYTES];
+    const char *mat = static_cast<const char *>(inmat);
+    assert(eltbytes <= BUFBYTES);
+
+    std::vector<CLK> clks;
+    clks.resize(nrows);
+    for (int i = 0; i < nrows; ++i) {
+        clks[i].resize(ncols);
+        for (int j = 0; j < ncols; ++j) {
+            const char *begin = mat + (i * ncols + j) * eltbytes;
+            std::memset(valbuf, 0, BUFBYTES);
+            std::memcpy(valbuf, begin, eltbytes);
+            imemstream buf(begin, 8);
+            std::int64_t val;
+            buf >> val;
+            clks[i][j] = val;
+        }
+    }
+    return clks;
+}
+
+
+void
+seclink_encrypt_left(
+    const seclink_ctx_t ctx,
+    seclink_emat_t *outmat,
+    const void *inmat, int nrows, int ncols, int eltbytes,
+    const char *pubkey, int pubkeybytes)
+{
+    std::vector<CLK> clks = make_clks(inmat, nrows, ncols, eltbytes);
+    auto ptxts = clks_to_left_matrix(clks, ctx->encoder);
+    *outmat = new seclink_emat;
+    (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
+}
+
+
+void
+seclink_encrypt_right(
+    const seclink_ctx_t ctx,
+    seclink_emat_t *outmat,
+    const void *inmat, int nrows, int ncols, int eltbytes,
+    const char *pubkey, int pubkeybytes)
+{
+    std::vector<CLK> clks = make_clks(inmat, nrows, ncols, eltbytes);
+    auto ptxts = clks_to_right_matrix(clks, ctx->encoder);
+    *outmat = new seclink_emat;
+    (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
+}

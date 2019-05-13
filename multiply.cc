@@ -182,6 +182,7 @@ emat_emat_prod(
     return res;
 }
 
+
 vector<Ciphertext>
 emat_mat_prod(
         const vector<Ciphertext> &X,
@@ -207,4 +208,19 @@ mat_emat_prod(
     for (auto &y : Y)
         res.push_back(mat_evec_prod(X, y, eval, galois_keys));
     return res;
+}
+
+
+void seclink_multiply(const seclink_ctx_t ctx,
+        seclink_emat_t *res,
+        const seclink_emat_t left,
+        const seclink_emat_t right,
+        const char *galkeys, int galkeysbytes) {
+    imemstream in(galkeys, galkeysbytes);
+    seal::GaloisKeys gkeys;
+    gkeys.load(ctx->context, in);
+
+    Evaluator evaluator(ctx->context);
+    *res = new seclink_emat;
+    (*res)->data = emat_emat_prod(left->data, right->data, evaluator, gkeys);
 }

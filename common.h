@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <istream>
 #include <streambuf>
 
 #include <seal/seal.h>
@@ -21,9 +22,10 @@ using seal::BatchEncoder;
 
 struct seclink_ctx {
     std::shared_ptr<seal::SEALContext> context;
-    seal::Evaluator evaluator;
     seal::BatchEncoder encoder;
-    seal::GaloisKeys galkeys;
+
+    seclink_ctx(std::shared_ptr<seal::SEALContext> ctx)
+        : context(ctx), encoder(ctx) { }
 };
 
 struct seclink_emat {
@@ -31,24 +33,21 @@ struct seclink_emat {
 };
 
 
-// Found here: https://stackoverflow.com/a/7782037
-// Usage:
-//   char buffer[] = "I'm a buffer with embedded nulls\0and line\n feeds";
-//
-//   membuf sbuf(buffer, buffer + sizeof(buffer));
-//   std::istream in(&sbuf);
-//   std::string line;
-//   while (std::getline(in, line)) {
-//       std::cout << "line: " << line << "\n";
-//   }
-//   return 0;
-//
-struct membuf : std::streambuf {
-    // NB: C++ requires these to be char*, not const char*.
-    membuf(char* begin, char* end) {
-        this->setg(begin, begin, end);
+// Convenience for using buffers as streams
+// Found here: https://stackoverflow.com/a/13059195
+struct membuf: std::streambuf {
+    membuf(char const* base, size_t size) {
+        char* p(const_cast<char*>(base));
+        this->setg(p, p, p + size);
     }
 };
+struct imemstream: virtual membuf, std::istream {
+    imemstream(char const* base, size_t size)
+        : membuf(base, size)
+        , std::istream(static_cast<std::streambuf*>(this)) {
+    }
+};
+
 
 std::vector<Plaintext>
 clks_to_left_matrix(const std::vector<CLK> &clks, BatchEncoder &encoder);

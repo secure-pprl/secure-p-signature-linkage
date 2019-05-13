@@ -4,10 +4,8 @@ static std::vector<seal::Plaintext>
 decrypt_all(const seclink_ctx_t ctx,
         const seclink_emat_t inmat,
         const char *seckey, int seckeybytes) {
-    char *skey = const_cast<char *>(seckey); // super lame, C++!
-    membuf buf(skey, skey + seckeybytes);
+    imemstream in(seckey, seckeybytes);
     seal::SecretKey key;
-    std::istream in(&buf);
     key.load(ctx->context, in);
     seal::Decryptor decryptor(ctx->context, key);
 
