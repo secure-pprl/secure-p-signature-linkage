@@ -35,19 +35,29 @@ struct seclink_emat {
 
 // Convenience for using buffers as streams
 // Found here: https://stackoverflow.com/a/13059195
+// and here: https://stackoverflow.com/a/13542996
 struct membuf: std::streambuf {
-    membuf(char const* base, size_t size) {
-        char* p(const_cast<char*>(base));
-        this->setg(p, p, p + size);
+    membuf(char *base, std::size_t size) {
+        this->setp(base, base + size);
+        this->setg(base, base, base + size);
     }
+    std::size_t written() const { return this->pptr() - this->pbase(); }
+    std::size_t read() const    { return this->gptr() - this->eback(); }
 };
+
 struct imemstream: virtual membuf, std::istream {
-    imemstream(char const* base, size_t size)
-        : membuf(base, size)
-        , std::istream(static_cast<std::streambuf*>(this)) {
+    imemstream(const char *base, std::size_t size)
+        : membuf(const_cast<char *>(base), size)
+        , std::istream(static_cast<std::streambuf *>(this)) {
     }
 };
 
+struct omemstream: virtual membuf, std::ostream {
+    omemstream(char *base, std::size_t size)
+        : membuf(base, size)
+        , std::ostream(static_cast<std::streambuf *>(this)) {
+    }
+};
 
 std::vector<Plaintext>
 clks_to_left_matrix(const std::vector<CLK> &clks, BatchEncoder &encoder);
