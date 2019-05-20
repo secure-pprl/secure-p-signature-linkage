@@ -12,26 +12,6 @@ using namespace seal;
 using namespace std;
 
 
-void generate_clks(vector<CLK> &clks, int nclks, int clksz) {
-    // From: https://stackoverflow.com/a/23143753
-
-    // First create an instance of an engine.
-    random_device rnd_device;
-    // Specify the engine and distribution.
-    mt19937 mersenne_engine {rnd_device()};  // Generates random integers
-    uniform_int_distribution<int> dist {0, 1};
-
-    auto gen = [&dist, &mersenne_engine](){
-        return dist(mersenne_engine);
-    };
-
-    clks.resize(nclks);
-    for (auto &v : clks) {
-        v.resize(clksz);
-        generate(begin(v), end(v), gen);
-    }
-}
-
 /*
 Helper function: Prints the parameters in a SEALContext.
 */
@@ -85,69 +65,6 @@ void print_parameters(shared_ptr<SEALContext> context)
     cout << endl;
 }
 
-void noise_test(int poldeg) {
-    int plain_mod = poldeg == 2048 ? 12289 : 40961;
-    EncryptionParameters parms(scheme_type::BFV);
-
-    parms.set_poly_modulus_degree(poldeg);
-    parms.set_coeff_modulus(DefaultParams::coeff_modulus_128(poldeg));
-    parms.set_plain_modulus(plain_mod);
-
-    auto context = SEALContext::Create(parms);
-    print_parameters(context);
-
-    auto qualifiers = context->context_data()->qualifiers();
-    cout << "Batching enabled: " << boolalpha << qualifiers.using_batching << endl;
-
-    KeyGenerator keygen(context);
-    auto public_key = keygen.public_key();
-    auto secret_key = keygen.secret_key();
-
-    int relin_key_bits = 30;
-    auto relin_keys = keygen.relin_keys(relin_key_bits);
-
-    Encryptor encryptor(context, public_key);
-    Evaluator evaluator(context);
-    Decryptor decryptor(context, secret_key);
-    BatchEncoder encoder(context);
-    vector<CLK> clks;
-    generate_clks(clks, 2, encoder.slot_count());
-
-    Plaintext plain1, plain2;
-    encoder.encode(clks[0], plain1);
-    encoder.encode(clks[1], plain2);
-
-    Ciphertext encrypted1, encrypted2;
-    encryptor.encrypt(plain1, encrypted1);
-    encryptor.encrypt(plain2, encrypted2);
-
-    cout << "Noise budget in inputs: "
-        << decryptor.invariant_noise_budget(encrypted1) << " bits" << endl;
-
-    evaluator.multiply_inplace(encrypted1, encrypted2);
-    cout << "Noise budget in product: "
-        << decryptor.invariant_noise_budget(encrypted1) << " bits" << endl;
-
-    //int galois_key_bits = 30;
-    //auto galois_keys = keygen.galois_keys(galois_key_bits);
-
-    for (int bits = 5; bits < 60; bits += 5) {
-        auto galois_keys = keygen.galois_keys(bits);
-        evaluator.rotate_rows_inplace(encrypted2, 1, galois_keys);
-        cout << "Noise budget after " << bits << " bit rotation: "
-             << decryptor.invariant_noise_budget(encrypted2) << " bits" << endl;
-    }
-}
-
-/*
-Helper function: Prints the `parms_id' to std::ostream.
-*/
-ostream &operator <<(ostream &stream, parms_id_type parms_id)
-{
-    stream << hex << parms_id[0] << " " << parms_id[1] << " "
-        << parms_id[2] << " " << parms_id[3] << dec;
-    return stream;
-}
 
 template< typename Res, typename Func >
 Res timeit(string pre, Func fn) {
