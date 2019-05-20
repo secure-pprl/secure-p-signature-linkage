@@ -1,4 +1,6 @@
 #include <cassert>
+#include <vector>
+#include <algorithm> // rotate
 
 #include "common.h"
 
@@ -16,7 +18,7 @@ clks_to_left_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     vector< vector<int64_t> > diag_matrix;
     for (size_t i = 0; i < clks.size(); ++i) {
         vector<int64_t> cpy(clks[i]);
-        rotate(begin(cpy), begin(cpy) + (i % cpy.size()), end(cpy));
+        std::rotate(begin(cpy), begin(cpy) + (i % cpy.size()), end(cpy));
         diag_matrix.push_back(cpy);
     }
 
@@ -31,6 +33,8 @@ clks_to_left_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     vector<Plaintext> ptxts(clksz);
     for (size_t i = 0; i < clksz; ++i) {
         vector<int64_t> cpy(diag_matrix_tr[i]);
+        // duplicate diag_matrix_tr[i]
+        // TODO: can we use repeat (below) instead?
         cpy.insert(end(cpy), begin(cpy), end(cpy));
         encoder.encode(cpy, ptxts[i]);
     }
@@ -155,7 +159,8 @@ seclink_encrypt_right(
     const void *inmat, int nrows, int ncols, int eltbytes,
     const char *pubkey, int pubkeybytes)
 {
-    std::vector<CLK> clks = make_clks(inmat, nrows, ncols, eltbytes);
+    // TODO: Double-check: why do we have to switch nrows and ncols here?
+    std::vector<CLK> clks = make_clks(inmat, ncols, nrows, eltbytes);
     auto ptxts = clks_to_right_matrix(clks, ctx->encoder);
     *outmat = new seclink_emat;
     (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
