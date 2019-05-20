@@ -78,15 +78,13 @@ Res timeit(string pre, Func fn) {
 }
 
 void check_result(string pre,
-                  const vector<int64_t> &expected,
-                  Ciphertext &cres,
-                  Decryptor &decryptor,
-                  BatchEncoder &decoder) {
-    Plaintext pres;
-    decryptor.decrypt(cres, pres);
+        const vector<int64_t> &expected,
+        char *output, size_t nelts, size_t eltbytes) {
 
+    assert(eltbytes == 1);
     vector<int64_t> res;
-    decoder.decode(pres, res);
+    for (size_t i = 0; i < nelts; ++i)
+        res.push_back(static_cast<int64_t>(output[i]));
 
     if (res.size() != expected.size()) {
         cout << pre << ": dimension error: expected size "
@@ -165,6 +163,18 @@ int main(int argc, char *argv[]) {
     /* Decryption */
     cout << "decrypting..." << endl;
     seclink_decrypt(ctx, output, nrows, 2, eltbytes, prod, seckey, seckeybytes);
+
+    /* Check result */
+    vector<vector<int64_t>> clks;
+    for (int i = 0; i < nclks; ++i) {
+        vector<int64_t> clk;
+        clk.resize(clksz);
+        for (int j = 0; j < clksz; ++j)
+            clk.push_back(Linmat[i * clksz + j]);
+        clks.push_back(clk);
+    }
+    vector<int64_t> expected = mat_vec_prod(clks);
+    check_result("emat  vec", expected, output, nclks * 2, eltbytes);
 
     /* Clean up */
     cout << "cleaning up..." << endl;
