@@ -3,7 +3,6 @@
 #include <fstream>
 #include <memory>
 #include <random>
-#include <algorithm>
 #include <functional>
 #include <chrono>
 
@@ -193,19 +192,6 @@ void check_result(string pre,
     }
 }
 
-std::vector<char>
-read_file(const char *fname) {
-    std::ifstream file(fname, std::ios::binary | std::ios::ate);
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::vector<char> buffer(size);
-    if ( ! file.read(buffer.data(), size)) {
-        // throw exception
-    }
-    return buffer;
-}
-
 int main(int argc, char *argv[]) {
     if (argc > 1) {
         int thds = atoi(argv[1]);
@@ -219,7 +205,8 @@ int main(int argc, char *argv[]) {
     cout << "Using " << NTHREADS << "/"
             << thread::hardware_concurrency() << " threads" << endl;
 
-    int poldeg = 4096;
+    std::uint64_t plain_mod = 40961;
+    std::size_t poldeg = 4096;
     int nclks = poldeg / 2;
     int clksz = 512;
 
@@ -234,41 +221,47 @@ int main(int argc, char *argv[]) {
 
     char *output = new char[nclks * 2];
 
-    vector<char> vpubkey = read_file("public-key");
-    vector<char> vseckey = read_file("secret-key");
-    vector<char> vgalkeys = read_file("galois-keys");
-
-    const char *pubkey = vpubkey.data();
-    int pubkeybytes = vpubkey.size();
-    const char *seckey = vseckey.data();
-    int seckeybytes = vseckey.size();
-    const char *galkeys = vgalkeys.data();
-    int galkeysbytes = vgalkeys.size();
-
+    /* Context */
     seclink_ctx_t ctx;
-    seclink_init_ctx(&ctx);
+    seclink_init_ctx(&ctx, poldeg, plain_mod, NULL);
+
+    /* Key generation */
+    char *pubkey, *seckey, *galkeys;
+    size_t pubkeybytes, seckeybytes, galkeysbytes;
+    int galkey_bits = 30;
+    seclink_keygen(ctx, &pubkey, &pubkeybytes, &seckey, &seckeybytes,
+            &galkeys, &galkeysbytes, galkey_bits, 0, 0, 0);
 
     seclink_emat_t left, right, prod;
 
+    /* Encoding/encryption */
     cout << "encrypting left..." << endl;
-    seclink_encrypt_left(ctx, &left, Linmat, nrows, ncols, eltbytes, pubkey, pubkeybytes);
+    seclink_encrypt_left(ctx, &left, Linmat, nrows, clksz, eltbytes, pubkey, pubkeybytes);
     cout << "encrypting right..." << endl;
-    // FIXME: Something wrong with transposes here
-    seclink_encrypt_right(ctx, &right, Rinmat, 2, ncols, eltbytes, pubkey, pubkeybytes);
+    // FIXME: Something is wrong with transposes here
+    seclink_encrypt_right(ctx, &right, Rinmat, clksz, 2, eltbytes, pubkey, pubkeybytes);
 
+    /* Linkage */
     cout << "multiplying..." << endl;
     seclink_multiply(ctx, &prod, left, right, galkeys, galkeysbytes);
 
+    /* Decryption */
     cout << "decrypting..." << endl;
-    seclink_decrypt(ctx, output, 2, ncols, eltbytes, prod, seckey, seckeybytes);
+    seclink_decrypt(ctx, output, nrows, 2, eltbytes, prod, seckey, seckeybytes);
 
+    /* Clean up */
     cout << "cleaning up..." << endl;
     seclink_clear_ctx(ctx);
     seclink_clear_emat(left);
     seclink_clear_emat(right);
     seclink_clear_emat(prod);
+
     delete[] Linmat;
     delete[] output;
+
+    delete[] pubkey;
+    delete[] seckey;
+    delete[] galkeys;
 
 #if 0
     vector<int64_t> expected = mat_vec_prod(clks);
