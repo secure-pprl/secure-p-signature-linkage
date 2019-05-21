@@ -27,11 +27,10 @@ decrypt_all(
 void
 seclink_decrypt(
     const seclink_ctx_t ctx,
-    void *outmat, int nrows, int ncols, int eltbytes,
+    int64_t *outmat, int nrows, int ncols,
     const seclink_emat_t inmat,
     const char *seckey, int seckeybytes)
 {
-    char *out = static_cast<char *>(outmat);
     auto ptxts = decrypt_all(ctx, inmat, seckey, seckeybytes);
     int ptxt_rows = ctx->encoder.slot_count() / 2;
     int ptxt_cols = ptxts.size() * 2;
@@ -40,16 +39,10 @@ seclink_decrypt(
     assert(ncols >= ptxt_cols);
 
     // ptxts are columns.
-    std::memset(outmat, 0, nrows * ncols * eltbytes);
     int j = 0;
-    // FIXME: This will truncate the output
-    int nbytes = std::min(eltbytes, static_cast<int>(sizeof(std::int64_t)));
     for (auto &ptxt : ptxts) {
-        int i = 0;
-        for ( ; i < 2 * ptxt_rows; ++i) {
-            std::int64_t v = ptxt[i];
-            std::memcpy(out + eltbytes*(j * ptxt_rows + i), &v, nbytes);
-        }
+        for (int i = 0; i < 2 * ptxt_rows; ++i)
+            outmat[j * ptxt_rows + i] = ptxt[i];
         ++j;
     }
 }
