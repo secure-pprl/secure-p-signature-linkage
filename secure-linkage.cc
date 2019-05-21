@@ -66,26 +66,27 @@ void print_parameters(shared_ptr<SEALContext> context)
 }
 
 void
-check_result(string pre, const vector<int64_t> &expected, int64_t *output, size_t nelts)
+check_result(string pre,
+    const vector<int64_t> &expected,
+    const vector<int64_t> &output)
 {
-    vector<int64_t> res(output, output + nelts);
-    if (res.size() != expected.size()) {
+    if (output.size() != expected.size()) {
         cout << pre << ": dimension error: expected size "
              << expected.size() << ", got size "
-             << res.size() << endl;
+             << output.size() << endl;
         return;
     }
 
     int first_wrong = -1, nwrong = 0;
-    for (size_t i = 0; i < res.size(); ++i) {
-        if (res[i] != expected[i]) {
+    for (size_t i = 0; i < output.size(); ++i) {
+        if (output[i] != expected[i]) {
             ++nwrong;
             if (first_wrong < 0)
                 first_wrong = (int)i;
         }
     }
     if (nwrong > 0) {
-        cout << pre << ": " << nwrong << "/" << res.size()
+        cout << pre << ": " << nwrong << "/" << output.size()
             << " failures (first: " << first_wrong << ")" << endl;
     }
 }
@@ -108,16 +109,14 @@ int main(int argc, char *argv[]) {
     int nclks = poldeg / 2;
     int clksz = 512;
 
-    int64_t *Linmat = new int64_t[nclks * clksz];
+    vector<int64_t> Linmat(nclks * clksz);
     for (int i = 0; i < nclks * clksz; ++i) {
         Linmat[i] = (i*17 % 31) & 1;
-        //Linmat[i] = 1;
     }
-    int64_t *Rinmat = Linmat;
+    vector<int64_t> &Rinmat = Linmat;
     int nrows = nclks;
     //int ncols = clksz;
 
-    int64_t *output = new int64_t[nclks * 2];
 
     /* Context */
     seclink_ctx_t ctx;
@@ -136,11 +135,11 @@ int main(int argc, char *argv[]) {
 
     /* Encoding/encryption */
     cout << "encrypting left..." << endl;
-    seclink_encrypt_left(ctx, &left, Linmat, nrows, clksz, pubkey, pubkeybytes);
+    seclink_encrypt_left(ctx, &left, Linmat.data(), nrows, clksz, pubkey, pubkeybytes);
     cout << "encrypting right..." << endl;
     // TODO: Something incoherent about these transposes; the
     // transpose is undone inside the function!
-    seclink_encrypt_right(ctx, &right, Rinmat, clksz, 2, pubkey, pubkeybytes);
+    seclink_encrypt_right(ctx, &right, Rinmat.data(), clksz, 2, pubkey, pubkeybytes);
 
     /* Linkage */
     cout << "multiplying..." << endl;
@@ -148,17 +147,20 @@ int main(int argc, char *argv[]) {
 
     /* Decryption */
     cout << "decrypting..." << endl;
-    seclink_decrypt(ctx, output, nrows, 2, prod, seckey, seckeybytes);
+    vector<int64_t> output;
+    output.resize(nclks * 2);
+    seclink_decrypt(ctx, output.data(), nrows, 2, prod, seckey, seckeybytes);
 
     /* Check result */
     vector<vector<int64_t>> clks;
     clks.reserve(nclks);
+    auto iter = Linmat.begin();
     for (int i = 0; i < nclks; ++i) {
-        const int64_t *mat = Linmat + i*clksz;
-        clks.emplace_back(mat, mat + clksz);
+        clks.emplace_back(iter, iter + clksz);
+        iter += clksz;
     }
     vector<int64_t> expected = mat_vec_prod(clks);
-    check_result("emat  vec", expected, output, nclks * 2);
+    check_result("emat  vec", expected, output);
 
     /* Clean up */
     cout << "cleaning up..." << endl;
@@ -166,9 +168,6 @@ int main(int argc, char *argv[]) {
     seclink_clear_emat(left);
     seclink_clear_emat(right);
     seclink_clear_emat(prod);
-
-    delete[] Linmat;
-    delete[] output;
 
     delete[] pubkey;
     delete[] seckey;

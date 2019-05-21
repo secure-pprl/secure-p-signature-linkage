@@ -42,28 +42,21 @@ template< typename T >
 static void
 save_key_data(
     const T &key,
-    char **out_arr, std::size_t *out_bytes)
+    char **out_arr, std::size_t *out_bytes,
+    std::vector<char> &buf)
 {
-    // TODO: Determine a tighter bound on how much memory we could
-    // possibly need. Galois keys can be 11 MB though...
-    // TODO: We could reuse the scratch space between calls to avoid
-    // reallocation.
-    static constexpr std::size_t SCRATCH_BYTES = 1U << 24;
-    char *scratch_space = new char[SCRATCH_BYTES];
-
-    omemstream os(scratch_space, SCRATCH_BYTES);
+    omemstream os(buf.data(), buf.size());
     key.save(os);
     // FIXME: check that os.good() is all I need to check to detect overflow.
     assert(os.good());
 
     std::size_t nbytes = os.written();
-    assert(nbytes < SCRATCH_BYTES); // should be guaranteed after os.good()
+    assert(nbytes < buf.size()); // should be guaranteed after os.good()
     *out_bytes = nbytes;
     *out_arr = new char[nbytes];
 
-    std::copy(scratch_space, scratch_space + nbytes, *out_arr);
-
-    delete[] scratch_space;
+    auto it = buf.begin();
+    std::copy(it, it + nbytes, *out_arr);
 }
 
 // Create keys. galois_keys_* and/or relin_keys_* can be zero to
@@ -79,19 +72,24 @@ void seclink_keygen(const seclink_ctx_t ctx,
 {
     seal::KeyGenerator keygen(ctx->context);
 
+    // TODO: Determine a tighter bound on how much memory we could
+    // possibly need. Galois keys can be 11 MB though...
+    static constexpr std::size_t SCRATCH_BYTES = 1U << 24;
+    std::vector<char> scratch(SCRATCH_BYTES);
+
     auto public_key = keygen.public_key();
-    save_key_data(public_key, public_key_arr, public_key_bytes);
+    save_key_data(public_key, public_key_arr, public_key_bytes, scratch);
 
     auto secret_key = keygen.secret_key();
-    save_key_data(secret_key, secret_key_arr, secret_key_bytes);
+    save_key_data(secret_key, secret_key_arr, secret_key_bytes, scratch);
 
     if (galois_keys_arr && galois_keys_bytes && galois_key_bits > 0) {
         auto galois_keys = keygen.galois_keys(galois_key_bits);
-        save_key_data(galois_keys, galois_keys_arr, galois_keys_bytes);
+        save_key_data(galois_keys, galois_keys_arr, galois_keys_bytes, scratch);
     }
 
     if (relin_keys_arr && relin_keys_bytes && relin_key_bits > 0) {
         auto relin_keys = keygen.relin_keys(relin_key_bits);
-        save_key_data(relin_keys, relin_keys_arr, relin_keys_bytes);
+        save_key_data(relin_keys, relin_keys_arr, relin_keys_bytes, scratch);
     }
 }
