@@ -1,7 +1,7 @@
 LIBSEAL_PATH = /usr/local/lib/libseal.a
 
 OPTFLAGS = -O3 -fomit-frame-pointer -fno-strict-aliasing
-DBGFLAGS = -Og -ggdb3
+DBGFLAGS = -O0 -ggdb3
 CXXFLAGS += $(DBGFLAGS) -Wall -Wextra -pedantic -std=gnu++17 -fPIC -DPIC -fopenmp -pthread
 #CPPFLAGS = -Ipath/to/seal.h
 LDFLAGS = -fopenmp -pthread
