@@ -65,27 +65,10 @@ void print_parameters(shared_ptr<SEALContext> context)
     cout << endl;
 }
 
-
-template< typename Res, typename Func >
-Res timeit(string pre, Func fn) {
-    auto t1 = chrono::high_resolution_clock::now();
-    Res res = fn();
-    auto t2 = chrono::high_resolution_clock::now();
-    cout << pre << ": "
-         << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count()
-         << " ms\n";
-    return res;
-}
-
-void check_result(string pre,
-        const vector<int64_t> &expected,
-        char *output, size_t nelts, size_t eltbytes) {
-
-    assert(eltbytes == 1);
-    vector<int64_t> res;
-    for (size_t i = 0; i < nelts; ++i)
-        res.push_back(static_cast<int64_t>(output[i]));
-
+void
+check_result(string pre, const vector<int64_t> &expected, int64_t *output, size_t nelts)
+{
+    vector<int64_t> res(output, output + nelts);
     if (res.size() != expected.size()) {
         cout << pre << ": dimension error: expected size "
              << expected.size() << ", got size "
@@ -125,20 +108,22 @@ int main(int argc, char *argv[]) {
     int nclks = poldeg / 2;
     int clksz = 512;
 
-    char *Linmat = new char[nclks * clksz];
+    int64_t *Linmat = new int64_t[nclks * clksz];
     for (int i = 0; i < nclks * clksz; ++i) {
         Linmat[i] = (i*17 % 31) & 1;
+        //Linmat[i] = 1;
     }
-    char *Rinmat = Linmat;
+    int64_t *Rinmat = Linmat;
     int nrows = nclks;
-    int ncols = clksz;
-    int eltbytes = 1;
+    //int ncols = clksz;
 
-    char *output = new char[nclks * 2];
+    int64_t *output = new int64_t[nclks * 2];
 
     /* Context */
     seclink_ctx_t ctx;
     seclink_init_ctx(&ctx, poldeg, plain_mod, NULL);
+
+    print_parameters(ctx->context);
 
     /* Key generation */
     char *pubkey, *seckey, *galkeys;
@@ -151,10 +136,11 @@ int main(int argc, char *argv[]) {
 
     /* Encoding/encryption */
     cout << "encrypting left..." << endl;
-    seclink_encrypt_left(ctx, &left, Linmat, nrows, clksz, eltbytes, pubkey, pubkeybytes);
+    seclink_encrypt_left(ctx, &left, Linmat, nrows, clksz, pubkey, pubkeybytes);
     cout << "encrypting right..." << endl;
-    // FIXME: Something is wrong with transposes here
-    seclink_encrypt_right(ctx, &right, Rinmat, clksz, 2, eltbytes, pubkey, pubkeybytes);
+    // TODO: Something incoherent about these transposes; the
+    // transpose is undone inside the function!
+    seclink_encrypt_right(ctx, &right, Rinmat, clksz, 2, pubkey, pubkeybytes);
 
     /* Linkage */
     cout << "multiplying..." << endl;
@@ -162,19 +148,17 @@ int main(int argc, char *argv[]) {
 
     /* Decryption */
     cout << "decrypting..." << endl;
-    seclink_decrypt(ctx, output, nrows, 2, eltbytes, prod, seckey, seckeybytes);
+    seclink_decrypt(ctx, output, nrows, 2, prod, seckey, seckeybytes);
 
     /* Check result */
     vector<vector<int64_t>> clks;
+    clks.reserve(nclks);
     for (int i = 0; i < nclks; ++i) {
-        vector<int64_t> clk;
-        clk.resize(clksz);
-        for (int j = 0; j < clksz; ++j)
-            clk.push_back(Linmat[i * clksz + j]);
-        clks.push_back(clk);
+        const int64_t *mat = Linmat + i*clksz;
+        clks.emplace_back(mat, mat + clksz);
     }
     vector<int64_t> expected = mat_vec_prod(clks);
-    check_result("emat  vec", expected, output, nclks * 2, eltbytes);
+    check_result("emat  vec", expected, output, nclks * 2);
 
     /* Clean up */
     cout << "cleaning up..." << endl;
@@ -190,82 +174,5 @@ int main(int argc, char *argv[]) {
     delete[] seckey;
     delete[] galkeys;
 
-#if 0
-    vector<int64_t> expected = mat_vec_prod(clks);
-
-    vector<Plaintext> lhs_ptxts =
-        timeit< vector<Plaintext> >(" LHS clks", [&clks, &batch_encoder] {
-                return clks_to_left_matrix(clks, batch_encoder);
-            });
-    assert(lhs_ptxts.size() == (size_t)clksz);
-
-    vector<Plaintext> rhs_ptxts =
-        timeit< vector<Plaintext> >(" RHS clks", [&clks, &batch_encoder] {
-                return clks_to_right_matrix(clks, batch_encoder);
-            });
-    assert(rhs_ptxts.size() == (clks.size() + 1)/2);
-
-    auto encrypt = [&encryptor] (string pre, const vector<Plaintext> &ptxts) {
-        return timeit< vector<Ciphertext> >(pre, [&ptxts, &encryptor] () {
-                vector<Ciphertext> res;
-                for (auto &ptxt : ptxts) {
-                    Ciphertext ctxt;
-                    encryptor.encrypt(ptxt, ctxt);
-                    res.push_back(ctxt);
-                }
-                return res;
-            });
-    };
-
-    vector<Ciphertext> lhs_ctxts = encrypt(" LHS  enc", lhs_ptxts);
-    vector<Ciphertext> rhs_ctxts = encrypt(" RHS  enc", rhs_ptxts);
-
-    Ciphertext cres;
-#if 0
-    cres = timeit<Ciphertext>("emat  vec", [&rhs_ptxts, &lhs_ctxts, &evaluator, &batch_encoder] () {
-            return emat_vec_prod(lhs_ctxts, rhs_ptxts[0], evaluator, batch_encoder);
-        });
-    check_result("emat  vec", expected, cres, decryptor, batch_encoder);
-
-    cres = timeit<Ciphertext>(" mat evec", [&lhs_ptxts, &rhs_ctxts, &evaluator, &galois_keys] () {
-            return mat_evec_prod(lhs_ptxts, rhs_ctxts[0], evaluator, galois_keys);
-        });
-    check_result(" mat evec", expected, cres, decryptor, batch_encoder);
-#endif
-    cres = timeit<Ciphertext>("emat evec", [&lhs_ctxts, &rhs_ctxts, &evaluator, &galois_keys] () {
-            return emat_evec_prod_thread(lhs_ctxts, rhs_ctxts[0], evaluator, galois_keys);
-        });
-    check_result("emat evec", expected, cres, decryptor, batch_encoder);
-
-    vector<Ciphertext> cmat;
-#if 0
-    cmat = timeit<vector<Ciphertext>>("emat emat", [&lhs_ctxts, &rhs_ctxts, &evaluator, &galois_keys] () {
-            return emat_emat_prod(lhs_ctxts, rhs_ctxts, evaluator, galois_keys);
-        });
-    cmat = timeit<vector<Ciphertext>>("emat  mat", [&lhs_ctxts, &rhs_ptxts, &evaluator, &batch_encoder] () {
-            return emat_mat_prod(lhs_ctxts, rhs_ptxts, evaluator, batch_encoder);
-        });
-#endif
-
-
-    auto t1 = chrono::high_resolution_clock::now();
-    vector<Plaintext> junk;
-    for (auto &c : rhs_ctxts) {
-        Plaintext pres;
-        decryptor.decrypt(c, pres);
-        junk.push_back(pres);
-    }
-    auto t2 = chrono::high_resolution_clock::now();
-    cout << "Decryption: "
-         << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count()
-         << " ms\n";
-    cout << junk.size() << endl;
-
-    // cout << endl << endl;
-    // noise_test(2048);
-    // cout << endl;
-    // noise_test(4096);
-
-#endif
     return 0;
 }
