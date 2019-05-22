@@ -19,10 +19,8 @@ clean:
 $(LIB): $(LIB_OBJS)
 	$(CXX) -shared -o $(LIB) $(LIB_OBJS) $(LDFLAGS) $(LIBSEAL_PATH)
 
-# TODO: all the libseal stuff should be accessed via libseclink.so, so
-# remove $LIBSEAL_PATH from this command
 $(EXE): $(LIB) $(EXE_OBJS)
-	$(CXX) -o $(EXE) $(EXE_OBJS) -Wl,-rpath=. $(LIB) $(LDFLAGS) $(LIBSEAL_PATH)
+	$(CXX) -o $(EXE) $(EXE_OBJS) -Wl,-rpath=. $(LIB) $(LDFLAGS)
 
 keygen: $(LIB) keygen.o
-	$(CXX) -o keygen keygen.o -Wl,-rpath=. $(LIB) $(LDFLAGS) $(LIBSEAL_PATH)
+	$(CXX) -o keygen keygen.o -Wl,-rpath=. $(LIB) $(LDFLAGS)
