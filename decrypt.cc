@@ -1,12 +1,13 @@
 #include <cassert>
 
-#include "common.h"
+#include "memstream.h"
+#include "seclink_internal.h"
 
 static std::vector< std::vector<std::int64_t> >
 decrypt_all(
     const seclink_ctx_t ctx,
     const seclink_emat_t inmat,
-    const char *seckey, int seckeybytes)
+    const char *seckey, size_t seckeybytes)
 {
     imemstream in(seckey, seckeybytes);
     seal::SecretKey key;

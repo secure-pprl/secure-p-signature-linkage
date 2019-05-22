@@ -5,11 +5,31 @@
 #include <random>
 #include <functional>
 #include <chrono>
+#include <numeric> // inner_product
 
-#include "common.h"
+#include "seclink.h"
+#include "seclink_internal.h" // only needed for print_parameters
+
+#include <seal/seal.h>
 
 using namespace seal;
 using namespace std;
+
+typedef std::vector<int64_t> CLK;
+
+vector<int64_t>
+mat_vec_prod(const vector<CLK> &clks) {
+    vector<int64_t> res;
+    CLK vec;
+
+    vec= clks[0];
+    for (auto &clk : clks)
+        res.push_back(inner_product(begin(clk), end(clk), begin(vec), 0L));
+    vec = clks[1];
+    for (auto &clk : clks)
+        res.push_back(inner_product(begin(clk), end(clk), begin(vec), 0L));
+    return res;
+}
 
 
 /*
@@ -91,19 +111,7 @@ check_result(string pre,
     }
 }
 
-int main(int argc, char *argv[]) {
-    if (argc > 1) {
-        int thds = atoi(argv[1]);
-        if (thds > 0 && thds <= 64) {
-            NTHREADS = (unsigned) thds;
-        } else {
-            cout << "WARN: nthreads must be > 0 and <= 64; "
-                 << "continuing single-threaded" << endl;
-        }
-    }
-    cout << "Using " << NTHREADS << "/"
-            << thread::hardware_concurrency() << " threads" << endl;
-
+int main() {
     std::uint64_t plain_mod = 40961;
     std::size_t poldeg = 4096;
     int nclks = poldeg / 2;

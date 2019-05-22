@@ -2,10 +2,10 @@
 #include <vector>
 #include <algorithm> // rotate, generate
 
-#include "common.h"
+#include "memstream.h"
+#include "seclink_internal.h"
 
 using namespace std;
-using namespace seal;
 
 /*
  * rowmat is an array of nrows*ncols int64_t values. It is interpreted
@@ -13,8 +13,8 @@ using namespace seal;
  * row 0 is {rowmat[0], rowmat[1], ..., colmat[ncols - 1]}
  * column 0 is {rowmat[0], rowmat[nrows], ..., rowmat[nrows * (ncols - 1)]},
  */
-vector<Plaintext>
-encode_left_matrix(const int64_t *rowmat, size_t nrows, size_t ncols, BatchEncoder &encoder)
+static vector<seal::Plaintext>
+encode_left_matrix(const int64_t *rowmat, size_t nrows, size_t ncols, seal::BatchEncoder &encoder)
 {
     assert(nrows > 0 && ncols > 0);
 
@@ -22,7 +22,7 @@ encode_left_matrix(const int64_t *rowmat, size_t nrows, size_t ncols, BatchEncod
     // TODO: Relax this restriction with chunking
     assert(nrows <= half_slot_count);
 
-    vector<Plaintext> ptxts(ncols);
+    vector<seal::Plaintext> ptxts(ncols);
     vector<int64_t> ptxt(2 * nrows);
     for (size_t j = 0; j < ncols; ++j) {
         size_t cidx = j; // target column index
@@ -59,8 +59,8 @@ struct repeat {
  * in COLUMN-MAJOR order, that is column 0 is {colmat[0], ..., colmat[nrows-1]},
  * and row 0 is {colmat[0], colmat[ncols], ..., colmat[ncols * (nrows-1)]}
  */
-vector<Plaintext>
-encode_right_matrix(const int64_t *colmat, size_t nrows, size_t ncols, BatchEncoder &encoder)
+static vector<seal::Plaintext>
+encode_right_matrix(const int64_t *colmat, size_t nrows, size_t ncols, seal::BatchEncoder &encoder)
 {
     assert(nrows > 0 && ncols > 0);
 
@@ -71,7 +71,7 @@ encode_right_matrix(const int64_t *colmat, size_t nrows, size_t ncols, BatchEnco
     size_t reps_per_col = half_slot_count / nrows;
 
     size_t i = 0, nptxts = (ncols + 1) / 2; // ceil(ncols / 2.0)
-    vector<Plaintext> ptxts(nptxts);
+    vector<seal::Plaintext> ptxts(nptxts);
 
     // Iterate over the columns of colmat, two at a time.
     vector<int64_t> ptxt(2 * nrows * reps_per_col);
@@ -102,7 +102,7 @@ get_encryptor(
 }
 
 
-static std::vector<seal::Ciphertext>
+static vector<seal::Ciphertext>
 encrypt_all(
     const seclink_ctx_t ctx,
     const std::vector<seal::Plaintext> &ptxts,
