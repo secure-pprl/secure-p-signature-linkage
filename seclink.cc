@@ -54,6 +54,7 @@ save_key_data(
     std::size_t nbytes = os.written();
     assert(nbytes < buf.size()); // should be guaranteed after os.good()
     *out_bytes = nbytes;
+    // NB: must match the delete[] statement in 'seclink_clear_key()'.
     *out_arr = new char[nbytes];
 
     auto it = buf.begin();
@@ -93,4 +94,10 @@ void seclink_keygen(const seclink_ctx_t ctx,
         auto relin_keys = keygen.relin_keys(relin_key_bits);
         save_key_data(relin_keys, relin_keys_arr, relin_keys_bytes, scratch);
     }
+}
+
+void seclink_clear_key(char *key)
+{
+    // NB: must match the new[] statement in 'save_key_data()'.
+    delete[] key;
 }
