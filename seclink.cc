@@ -4,8 +4,8 @@
 #include "common.h"
 
 void seclink_init_ctx(seclink_ctx_t *ctx,
-        std::size_t polmod_deg, std::uint64_t plain_mod,
-        std::uint64_t prng_seed[2])
+        size_t polmod_deg, uint64_t plain_mod,
+        uint64_t prng_seed[2])
 {
     // FIXME: SEAL's PRNG system is at best misleading; if we specify
     // a seed here, then the same PRNG starting at that seed will be

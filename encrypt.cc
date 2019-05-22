@@ -83,7 +83,7 @@ encode_right_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
 static seal::Encryptor
 get_encryptor(
     const seclink_ctx_t ctx,
-    const char *pubkey, int pubkeybytes)
+    const char *pubkey, size_t pubkeybytes)
 {
     imemstream in(pubkey, pubkeybytes);
     seal::PublicKey pkey;
@@ -96,7 +96,7 @@ static std::vector<seal::Ciphertext>
 encrypt_all(
     const seclink_ctx_t ctx,
     const std::vector<seal::Plaintext> &ptxts,
-    const char *pubkey, int pubkeybytes)
+    const char *pubkey, size_t pubkeybytes)
 {
     seal::Encryptor encryptor = get_encryptor(ctx, pubkey, pubkeybytes);
     std::vector<seal::Ciphertext> res;
@@ -110,11 +110,11 @@ encrypt_all(
 
 
 static std::vector<CLK>
-make_clks(const int64_t *inmat, int nrows, int ncols)
+make_clks(const int64_t *inmat, size_t nrows, size_t ncols)
 {
     std::vector<CLK> clks;
     clks.reserve(nrows);
-    for (int i = 0; i < nrows; ++i) {
+    for (size_t i = 0; i < nrows; ++i) {
         const int64_t *mat = inmat + i*ncols;
         clks.emplace_back(mat, mat + ncols);
     }
@@ -126,8 +126,8 @@ void
 seclink_encrypt_left(
     const seclink_ctx_t ctx,
     seclink_emat_t *outmat,
-    const int64_t *inmat, int nrows, int ncols,
-    const char *pubkey, int pubkeybytes)
+    const int64_t *inmat, size_t nrows, size_t ncols,
+    const char *pubkey, size_t pubkeybytes)
 {
     std::vector<CLK> clks = make_clks(inmat, nrows, ncols);
     auto ptxts = encode_left_matrix(clks, ctx->encoder);
@@ -140,8 +140,8 @@ void
 seclink_encrypt_right(
     const seclink_ctx_t ctx,
     seclink_emat_t *outmat,
-    const int64_t *inmat, int nrows, int ncols,
-    const char *pubkey, int pubkeybytes)
+    const int64_t *inmat, size_t nrows, size_t ncols,
+    const char *pubkey, size_t pubkeybytes)
 {
     // TODO: Double-check: why do we have to switch nrows and ncols here?
     std::vector<CLK> clks = make_clks(inmat, ncols, nrows);

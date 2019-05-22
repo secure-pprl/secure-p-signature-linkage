@@ -1,16 +1,17 @@
 #pragma once
 
-#include <cstdint>
 #include <vector>
 #include <istream>
 #include <streambuf>
+
+#include <stdint.h>
 
 #include <seal/seal.h>
 
 #include "seclink.h"
 
 
-typedef std::vector<std::int64_t> CLK;
+typedef std::vector<int64_t> CLK;
 
 extern unsigned NTHREADS;
 
@@ -37,7 +38,7 @@ struct seclink_emat {
 // Found here: https://stackoverflow.com/a/13059195
 // and here: https://stackoverflow.com/a/13542996
 struct membuf: std::streambuf {
-    membuf(char *base, std::size_t size) {
+    membuf(char *base, size_t size) {
         this->setp(base, base + size);
         this->setg(base, base, base + size);
     }
@@ -46,7 +47,7 @@ struct membuf: std::streambuf {
 };
 
 struct imemstream: virtual membuf, std::istream {
-    imemstream(const char *base, std::size_t size)
+    imemstream(const char *base, size_t size)
         : membuf(const_cast<char *>(base), size)
         , std::istream(static_cast<std::streambuf *>(this)) {
     }
@@ -59,13 +60,7 @@ struct omemstream: virtual membuf, std::ostream {
     }
 };
 
-std::vector<Plaintext>
-clks_to_left_matrix(const std::vector<CLK> &clks, BatchEncoder &encoder);
-
-std::vector<Plaintext>
-clks_to_right_matrix(const std::vector<CLK> &clks, BatchEncoder &encoder);
-
-std::vector<std::int64_t>
+std::vector<int64_t>
 mat_vec_prod(const std::vector<CLK> &clks);
 
 Ciphertext

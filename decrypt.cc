@@ -27,21 +27,21 @@ decrypt_all(
 void
 seclink_decrypt(
     const seclink_ctx_t ctx,
-    int64_t *outmat, int nrows, int ncols,
+    int64_t *outmat, size_t nrows, size_t ncols,
     const seclink_emat_t inmat,
-    const char *seckey, int seckeybytes)
+    const char *seckey, size_t seckeybytes)
 {
     auto ptxts = decrypt_all(ctx, inmat, seckey, seckeybytes);
-    int ptxt_rows = ctx->encoder.slot_count() / 2;
-    int ptxt_cols = ptxts.size() * 2;
+    size_t ptxt_rows = ctx->encoder.slot_count() / 2;
+    size_t ptxt_cols = ptxts.size() * 2;
 
     assert(nrows >= ptxt_rows);
     assert(ncols >= ptxt_cols);
 
     // ptxts are columns.
-    int j = 0;
+    size_t j = 0;
     for (auto &ptxt : ptxts) {
-        for (int i = 0; i < 2 * ptxt_rows; ++i)
+        for (size_t i = 0; i < 2 * ptxt_rows; ++i)
             outmat[j * ptxt_rows + i] = ptxt[i];
         ++j;
     }

@@ -215,7 +215,7 @@ void seclink_multiply(const seclink_ctx_t ctx,
         seclink_emat_t *res,
         const seclink_emat_t left,
         const seclink_emat_t right,
-        const char *galkeys, int galkeysbytes) {
+        const char *galkeys, size_t galkeysbytes) {
     imemstream in(galkeys, galkeysbytes);
     seal::GaloisKeys gkeys;
     gkeys.load(ctx->context, in);
