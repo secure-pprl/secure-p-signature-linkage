@@ -137,8 +137,6 @@ int main(int argc, char *argv[]) {
     cout << "encrypting left..." << endl;
     seclink_encrypt_left(ctx, &left, Linmat.data(), nrows, clksz, pubkey, pubkeybytes);
     cout << "encrypting right..." << endl;
-    // TODO: Something incoherent about these transposes; the
-    // transpose is undone inside the function!
     seclink_encrypt_right(ctx, &right, Rinmat.data(), clksz, 2, pubkey, pubkeybytes);
 
     /* Linkage */

@@ -7,36 +7,34 @@
 using namespace std;
 using namespace seal;
 
+/*
+ * rowmat is an array of nrows*ncols int64_t values. It is interpreted
+ * in ROW-MAJOR order, that is
+ * row 0 is {rowmat[0], rowmat[1], ..., colmat[ncols - 1]}
+ * column 0 is {rowmat[0], rowmat[nrows], ..., rowmat[nrows * (ncols - 1)]},
+ */
 vector<Plaintext>
-encode_left_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
-    size_t clksz = clks[0].size();
+encode_left_matrix(const int64_t *rowmat, size_t nrows, size_t ncols, BatchEncoder &encoder)
+{
+    assert(nrows > 0 && ncols > 0);
 
     size_t half_slot_count = encoder.slot_count() / 2;
-    assert(half_slot_count % clksz == 0);
-    assert(clks.size() <= half_slot_count); // FIXME relax this with chunking
+    // TODO: Relax this restriction with chunking
+    assert(nrows <= half_slot_count);
 
-    vector< vector<int64_t> > diag_matrix;
-    for (size_t i = 0; i < clks.size(); ++i) {
-        vector<int64_t> cpy(clks[i]);
-        std::rotate(begin(cpy), begin(cpy) + (i % cpy.size()), end(cpy));
-        diag_matrix.push_back(cpy);
-    }
-
-    // Transpose diag_matrix
-    vector< vector<int64_t> > diag_matrix_tr(diag_matrix[0].size());
-    for (auto &v : diag_matrix_tr)
-        v.resize(diag_matrix.size());
-    for (size_t i = 0; i < diag_matrix.size(); ++i)
-        for (size_t j = 0; j < diag_matrix[0].size(); ++j)
-            diag_matrix_tr[j][i] = diag_matrix[i][j];
-
-    vector<Plaintext> ptxts(clksz);
-    for (size_t i = 0; i < clksz; ++i) {
-        vector<int64_t> cpy(diag_matrix_tr[i]);
-        // duplicate diag_matrix_tr[i]
-        // TODO: can we use repeat (below) instead?
-        cpy.insert(end(cpy), begin(cpy), end(cpy));
-        encoder.encode(cpy, ptxts[i]);
+    vector<Plaintext> ptxts(ncols);
+    vector<int64_t> ptxt(2 * nrows);
+    for (size_t j = 0; j < ncols; ++j) {
+        size_t cidx = j; // target column index
+        auto row = rowmat;
+        for (size_t i = 0; i < nrows; ++i, row += ncols) {
+            ptxt[i] = row[cidx];
+            ptxt[i + nrows] = ptxt[i]; // both columns are the same
+            // cidx == (i + j) % ncols
+            if (++cidx == ncols)
+                cidx = 0;
+        }
+        encoder.encode(ptxt, ptxts[j]);
     }
     return ptxts;
 }
@@ -87,7 +85,7 @@ encode_right_matrix(const int64_t *colmat, size_t nrows, size_t ncols, BatchEnco
 
         encoder.encode(ptxt, ptxts[i]);
     }
-    // FIXME: Handle last CLK
+    // FIXME: Handle last column when ncols is not even
     return ptxts;
 }
 
@@ -121,19 +119,6 @@ encrypt_all(
 }
 
 
-static std::vector<CLK>
-make_clks(const int64_t *inmat, size_t nrows, size_t ncols)
-{
-    std::vector<CLK> clks;
-    clks.reserve(nrows);
-    for (size_t i = 0; i < nrows; ++i) {
-        const int64_t *mat = inmat + i*ncols;
-        clks.emplace_back(mat, mat + ncols);
-    }
-    return clks;
-}
-
-
 void
 seclink_encrypt_left(
     const seclink_ctx_t ctx,
@@ -141,8 +126,7 @@ seclink_encrypt_left(
     const int64_t *rowmat, size_t nrows, size_t ncols,
     const char *pubkey, size_t pubkeybytes)
 {
-    std::vector<CLK> clks = make_clks(rowmat, nrows, ncols);
-    auto ptxts = encode_left_matrix(clks, ctx->encoder);
+    auto ptxts = encode_left_matrix(rowmat, nrows, ncols, ctx->encoder);
     *outmat = new seclink_emat;
     (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
 }
@@ -155,7 +139,6 @@ seclink_encrypt_right(
     const int64_t *colmat, size_t nrows, size_t ncols,
     const char *pubkey, size_t pubkeybytes)
 {
-    // TODO: Double-check: why do we have to switch nrows and ncols here?
     auto ptxts = encode_right_matrix(colmat, nrows, ncols, ctx->encoder);
     *outmat = new seclink_emat;
     (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);

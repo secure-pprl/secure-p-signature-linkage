@@ -34,12 +34,12 @@ void seclink_clear_emat(seclink_emat_t mat);
 
 void seclink_encrypt_left(const seclink_ctx_t ctx,
         seclink_emat_t *outmat,
-        const int64_t *inmat, size_t nrows, size_t ncols,
+        const int64_t *rowmat, size_t nrows, size_t ncols,
         const char *pubkey, size_t pubkeybytes);
 
 void seclink_encrypt_right(const seclink_ctx_t ctx,
         seclink_emat_t *outmat,
-        const int64_t *inmat, size_t nrows, size_t ncols,
+        const int64_t *colmat, size_t nrows, size_t ncols,
         const char *pubkey, size_t pubkeybytes);
 
 void seclink_multiply(const seclink_ctx_t ctx,
