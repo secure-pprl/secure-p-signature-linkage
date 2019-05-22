@@ -21,6 +21,3 @@ $(LIB): $(LIB_OBJS)
 
 $(EXE): $(LIB) $(EXE_OBJS)
 	$(CXX) -o $(EXE) $(EXE_OBJS) -Wl,-rpath=. $(LIB) $(LDFLAGS)
-
-keygen: $(LIB) keygen.o
-	$(CXX) -o keygen keygen.o -Wl,-rpath=. $(LIB) $(LDFLAGS)
