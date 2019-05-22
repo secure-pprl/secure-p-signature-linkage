@@ -1,6 +1,6 @@
 #include <cassert>
 #include <vector>
-#include <algorithm> // rotate
+#include <algorithm> // rotate, generate
 
 #include "common.h"
 
@@ -8,7 +8,7 @@ using namespace std;
 using namespace seal;
 
 vector<Plaintext>
-clks_to_left_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
+encode_left_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     size_t clksz = clks[0].size();
 
     size_t half_slot_count = encoder.slot_count() / 2;
@@ -41,15 +41,15 @@ clks_to_left_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     return ptxts;
 }
 
-template< template<typename> class C, typename T >
+template< typename Iter >
 struct repeat {
-    typename C<T>::const_iterator idx, begin, end;
+    Iter idx, begin, end;
 
-    explicit repeat(const C<T> &seq)
-        : idx(std::begin(seq)), begin(std::begin(seq)), end(std::end(seq)) { }
+    explicit repeat(Iter b, Iter e)
+        : idx(b), begin(b), end(e) { }
 
-    T operator()() {
-        T res = *idx++;
+    auto operator()() {
+        auto res = *idx++;
         if (idx == end)
             idx = begin;
         return res;
@@ -57,7 +57,7 @@ struct repeat {
 };
 
 vector<Plaintext>
-clks_to_right_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
+encode_right_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     assert(clks.size() > 0);
     int clksz = clks[0].size();
     CLK empty_clk(clksz, 0);
@@ -71,8 +71,8 @@ clks_to_right_matrix(const vector<CLK> &clks, BatchEncoder &encoder) {
     for (size_t i = 0, j = 0; j < clks.size(); ++i, j += 2) {
         vector<int64_t> col(2 * clksz * clks_per_col);
         vector<int64_t>::iterator halfway = col.begin() + clksz * clks_per_col;
-        generate(col.begin(), halfway, repeat(clks[j]));
-        generate(halfway, col.end(), repeat(clks[j + 1]));
+        std::generate(col.begin(), halfway, repeat(clks[j].begin(), clks[j].end()));
+        std::generate(halfway, col.end(), repeat(clks[j + 1].begin(), clks[j+1].end()));
         encoder.encode(col, ptxts[i]);
     }
     // FIXME: Handle last CLK
@@ -130,7 +130,7 @@ seclink_encrypt_left(
     const char *pubkey, int pubkeybytes)
 {
     std::vector<CLK> clks = make_clks(inmat, nrows, ncols);
-    auto ptxts = clks_to_left_matrix(clks, ctx->encoder);
+    auto ptxts = encode_left_matrix(clks, ctx->encoder);
     *outmat = new seclink_emat;
     (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
 }
@@ -145,7 +145,7 @@ seclink_encrypt_right(
 {
     // TODO: Double-check: why do we have to switch nrows and ncols here?
     std::vector<CLK> clks = make_clks(inmat, ncols, nrows);
-    auto ptxts = clks_to_right_matrix(clks, ctx->encoder);
+    auto ptxts = encode_right_matrix(clks, ctx->encoder);
     *outmat = new seclink_emat;
     (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
 }
