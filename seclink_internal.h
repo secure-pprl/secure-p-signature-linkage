@@ -15,5 +15,9 @@ struct seclink_ctx {
 };
 
 struct seclink_emat {
+    size_t nrows, ncols;
     std::vector<seal::Ciphertext> data;
+
+    seclink_emat(size_t nrows_, size_t ncols_, const std::vector<seal::Ciphertext> &data_)
+        : nrows(nrows_), ncols(ncols_), data(data_) { };
 };

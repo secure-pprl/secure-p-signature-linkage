@@ -32,6 +32,7 @@ void seclink_clear_key(char *key);
 
 typedef struct seclink_emat *seclink_emat_t;
 
+void seclink_emat_shape(size_t *nrows, size_t *ncols, const seclink_emat_t mat);
 void seclink_clear_emat(seclink_emat_t mat);
 
 void seclink_encrypt_left(const seclink_ctx_t ctx,

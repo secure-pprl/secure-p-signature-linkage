@@ -73,6 +73,9 @@ void seclink_multiply(const seclink_ctx_t ctx,
     gkeys.load(ctx->context, in);
 
     Evaluator evaluator(ctx->context);
-    *res = new seclink_emat;
-    (*res)->data = emat_emat_prod(left->data, right->data, evaluator, gkeys);
+    // TODO: This possibly involves creating a copy of the entire
+    // encrypted matrix; see if there's a way to
+    // 'std::move/std::forward' it instead.
+    *res = new seclink_emat(left->nrows, right->ncols,
+            emat_emat_prod(left->data, right->data, evaluator, gkeys));
 }

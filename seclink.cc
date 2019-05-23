@@ -101,3 +101,10 @@ void seclink_clear_key(char *key)
     // NB: must match the new[] statement in 'save_key_data()'.
     delete[] key;
 }
+
+
+void seclink_emat_shape(size_t *nrows, size_t *ncols, const seclink_emat_t mat)
+{
+    *nrows = mat->nrows;
+    *ncols = mat->ncols;
+}

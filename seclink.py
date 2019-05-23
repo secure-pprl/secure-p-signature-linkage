@@ -1,5 +1,6 @@
 from cffi import FFI
 import weakref
+import numpy as np
 
 ffi = FFI()
 lib = ffi.dlopen('libseclink.so')
@@ -22,9 +23,12 @@ void seclink_keygen(const seclink_ctx_t ctx,
         char **galois_keys, size_t *galois_keys_bytes, int galois_key_bits,
         char **relin_keys, size_t *relin_keys_bytes, int relin_key_bits);
 
+void seclink_clear_key(char *key);
+
 
 typedef struct seclink_emat *seclink_emat_t;
 
+void seclink_emat_shape(size_t *nrows, size_t *ncols, const seclink_emat_t mat);
 void seclink_clear_emat(seclink_emat_t mat);
 
 void seclink_encrypt_left(const seclink_ctx_t ctx,
@@ -51,12 +55,12 @@ void seclink_decrypt(const seclink_ctx_t ctx,
 
 
 def create_ctx(poldeg = 4096, plain_mod = 40961):
-    def clr_ctx(ctx):
+    def clear_ctx(ctx):
         lib.seclink_clear_ctx(ctx[0])
 
     ctx = ffi.new('seclink_ctx_t *')
     lib.seclink_init_ctx(ctx, poldeg, plain_mod, ffi.NULL)
-    weakref.finalize(ctx, clr_ctx, ctx)
+    weakref.finalize(ctx, clear_ctx, ctx)
 
     # See https://cffi.readthedocs.io/en/latest/using.html for why we
     # need to use "subscript 0".
@@ -89,17 +93,94 @@ def keygen(ctx):
     return pkey_, skey_, gkey_, rkey_
 
 
-def encrypt_left(ctx, rowmat, pkey):
-    pass
+def _clear_emat(emat):
+    lib.seclink_clear_emat(emat[0])
 
 
-def encrypt_right(ctx, rowmat, pkey):
-    pass
+def _encrypt_matrix(ctx, mat, pkey, encrypt_fn):
+    # TODO: Use the other elements of __array_interface__ to handle
+    # more complicated arrays, with offsets, striding, etc.
+
+    assert mat.dtype == np.int64
+    nrows, ncols = mat.__array_interface__['shape']
+    mat_data, ro_flag = mat.__array_interface__['data']
+    assert mat_data is not None
+
+    mat_p = ffi.cast("int64_t *", mat_data)
+    pkey_buf = ffi.from_buffer(pkey)
+
+    emat = ffi.new('seclink_emat_t *')
+    encrypt_fn(ctx, emat, mat_p, nrows, ncols, pkey_buf, len(pkey));
+    weakref.finalize(emat, _clear_emat, emat)
+
+    return emat[0];
+
+
+def encrypt_left(ctx, mat, pkey):
+    mat = mat.reshape(mat.shape, order='C') # Ensure matrix is row-major
+    return _encrypt_matrix(ctx, mat, pkey, lib.seclink_encrypt_left)
+
+
+def encrypt_right(ctx, mat, pkey):
+    mat = mat.reshape(mat.shape, order='F') # Ensure matrix is column-major
+    return _encrypt_matrix(ctx, mat, pkey, lib.seclink_encrypt_right)
 
 
 def matmul(ctx, lmat, rmat, gkeys):
-    pass
+    prod = ffi.new('seclink_emat_t *')
+    gkeys_buf = ffi.from_buffer(gkeys)
+    lib.seclink_multiply(ctx, prod, lmat, rmat, gkeys_buf, len(gkeys))
+    weakref.finalize(prod, _clear_emat, prod)
+
+    return prod[0]
+
+def _emat_shape(emat):
+    nrows = ffi.new('size_t *')
+    ncols = ffi.new('size_t *')
+    lib.seclink_emat_shape(nrows, ncols, emat)
+    return nrows[0], ncols[0]
 
 
-def decrypt(ctx, mat, skey):
-    pass
+def decrypt(ctx, inmat, skey):
+    nrows, ncols = _emat_shape(inmat)
+    outmat = np.empty(shape = (nrows, ncols), dtype = np.int64)
+    outmat_data, ro_flag = outmat.__array_interface__['data']
+    assert outmat_data is not None
+    assert ro_flag is False
+
+    outmat_p = ffi.cast("int64_t *", outmat_data)
+    skey_buf = ffi.from_buffer(skey)
+    lib.seclink_decrypt(ctx, outmat_p, nrows, ncols, inmat, skey_buf, len(skey))
+
+    return outmat
+
+
+def run_test():
+    print('creating context')
+    ctx = create_ctx()
+    print('generating keys...')
+    pk, sk, gk, _ = keygen(ctx)
+
+    nrows = 8
+    ncols = 4
+    A = np.ones(shape=(nrows, ncols), dtype=np.int64)
+    B = (3*A).reshape(ncols, nrows, order='F')
+
+    print('encrypting left matrix...')
+    eA = encrypt_left(ctx, A, pk)
+    print('encrypting right matrix...')
+    eB = encrypt_right(ctx, B, pk)
+
+    print('multiplying encrypted matrices...')
+    prod = matmul(ctx, eA, eB, gk)
+    print('decrypting product matrix...')
+    out = decrypt(ctx, prod, sk)
+
+    print('out =')
+    print(out)
+    print('')
+    print('A*B = ')
+    print(A @ B)
+    print('')
+    okay = (out == A @ B).all()
+    print('result is correct? ', okay)

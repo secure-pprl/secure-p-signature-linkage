@@ -127,8 +127,11 @@ seclink_encrypt_left(
     const char *pubkey, size_t pubkeybytes)
 {
     auto ptxts = encode_left_matrix(rowmat, nrows, ncols, ctx->encoder);
-    *outmat = new seclink_emat;
-    (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
+    // TODO: This possibly involves creating a copy of the entire
+    // encrypted matrix; see if there's a way to
+    // 'std::move/std::forward' it instead.
+    *outmat = new seclink_emat(nrows, ncols,
+            encrypt_all(ctx, ptxts, pubkey, pubkeybytes));
 }
 
 
@@ -140,6 +143,9 @@ seclink_encrypt_right(
     const char *pubkey, size_t pubkeybytes)
 {
     auto ptxts = encode_right_matrix(colmat, nrows, ncols, ctx->encoder);
-    *outmat = new seclink_emat;
-    (*outmat)->data = encrypt_all(ctx, ptxts, pubkey, pubkeybytes);
+    // TODO: This possibly involves creating a copy of the entire
+    // encrypted matrix; see if there's a way to
+    // 'std::move/std::forward' it instead.
+    *outmat = new seclink_emat(nrows, ncols,
+            encrypt_all(ctx, ptxts, pubkey, pubkeybytes));
 }

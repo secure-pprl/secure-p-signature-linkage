@@ -34,16 +34,20 @@ seclink_decrypt(
 {
     auto ptxts = decrypt_all(ctx, inmat, seckey, seckeybytes);
     size_t ptxt_rows = ctx->encoder.slot_count() / 2;
-    size_t ptxt_cols = ptxts.size() * 2;
+    //size_t ptxt_cols = ptxts.size() * 2;
 
-    assert(nrows >= ptxt_rows);
-    assert(ncols >= ptxt_cols);
+    assert(nrows >= inmat->nrows);
+    assert(ncols >= inmat->ncols);
 
     // ptxts are columns.
-    size_t j = 0;
-    for (auto &ptxt : ptxts) {
-        for (size_t i = 0; i < 2 * ptxt_rows; ++i)
-            outmat[j * ptxt_rows + i] = ptxt[i];
+    auto ptxt = ptxts.begin();
+    for (size_t j = 0; j < inmat->ncols; ++j) {
+        size_t i;
+        for (i = 0; i < inmat->nrows; ++i)
+            outmat[j * nrows + i] = (*ptxt)[i];
         ++j;
+        for (size_t pi = ptxt_rows; i < inmat->nrows; ++i, ++pi)
+            outmat[j * nrows + i] = (*ptxt)[pi];
+        ++ptxt;
     }
 }
