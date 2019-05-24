@@ -157,9 +157,10 @@ def decrypt(ctx, inmat, skey):
 
 # nrows = 2048  # maximum allowable at the moment
 # ncols = 512   # 'BF length'
-# maxval = 1    # maximum vector element value
-def run_test(left_rows = 2048, left_cols = 512, right_cols = 2, maxval = 1):
+# maxval = 2    # maximum vector element value + 1; 2 => bit vectors
+def run_test(left_rows = 2048, left_cols = 512, right_cols = 2, maxval = 2):
     assert left_rows > 0 and left_cols > 0 and right_cols > 0
+    right_rows = left_cols
 
     # These restriction will be lifted eventually
     assert left_rows <= 2048 and left_cols <= 2048
@@ -175,9 +176,9 @@ def run_test(left_rows = 2048, left_cols = 512, right_cols = 2, maxval = 1):
     left = left.reshape(left_rows, left_cols)
 
     # right is a random matrix with shape left_cols x right_cols
-    right_size = left_cols * right_cols
+    right_size = right_rows * right_cols
     right = np.random.randint(maxval, size = right_size, dtype=np.int64)
-    right = right.reshape(left_cols, right_cols, order='F')
+    right = right.reshape(right_rows, right_cols, order='F')
 
     print('encrypting left matrix...')
     eLeft = encrypt_left(ctx, left, pk)
