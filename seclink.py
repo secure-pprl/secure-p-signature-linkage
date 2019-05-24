@@ -155,32 +155,41 @@ def decrypt(ctx, inmat, skey):
     return outmat
 
 
-def run_test():
+# nrows = 2048  # maximum allowable at the moment
+# ncols = 512   # 'BF length'
+# maxval = 1    # maximum vector element value
+def run_test(left_rows = 2048, left_cols = 512, right_cols = 2, maxval = 1):
+    assert left_rows > 0 and left_cols > 0 and right_cols > 0
+
+    # These restriction will be lifted eventually
+    assert left_rows <= 2048 and left_cols <= 2048
+
     print('creating context')
     ctx = create_ctx()
     print('generating keys...')
     pk, sk, gk, _ = keygen(ctx)
 
-    nrows = 8
-    ncols = 4
-    A = np.ones(shape=(nrows, ncols), dtype=np.int64)
-    B = (3*A).reshape(ncols, nrows, order='F')
+    # left is a random matrix with shape left_rows x left_cols
+    left_size = left_rows * left_cols
+    left = np.random.randint(maxval, size = left_size, dtype=np.int64)
+    left = left.reshape(left_rows, left_cols)
+
+    # right is a random matrix with shape left_cols x right_cols
+    right_size = left_cols * right_cols
+    right = np.random.randint(maxval, size = right_size, dtype=np.int64)
+    right = right.reshape(left_cols, right_cols, order='F')
 
     print('encrypting left matrix...')
-    eA = encrypt_left(ctx, A, pk)
+    eLeft = encrypt_left(ctx, left, pk)
     print('encrypting right matrix...')
-    eB = encrypt_right(ctx, B, pk)
+    eRight = encrypt_right(ctx, right, pk)
 
     print('multiplying encrypted matrices...')
-    prod = matmul(ctx, eA, eB, gk)
+    prod = matmul(ctx, eLeft, eRight, gk)
     print('decrypting product matrix...')
     out = decrypt(ctx, prod, sk)
 
-    print('out =')
-    print(out)
-    print('')
-    print('A*B = ')
-    print(A @ B)
-    print('')
-    okay = (out == A @ B).all()
+    expected = left @ right
+    print(out == expected)
+    okay = (out == expected).all()
     print('result is correct? ', okay)
