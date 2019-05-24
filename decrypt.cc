@@ -25,6 +25,9 @@ decrypt_all(
     return ptxts;
 }
 
+/*
+ * Decrypt inmat and put the result in outmat in ROW-MAJOR order.
+ */
 void
 seclink_decrypt(
     const seclink_ctx_t ctx,
@@ -43,11 +46,14 @@ seclink_decrypt(
     auto ptxt = ptxts.begin();
     for (size_t j = 0; j < inmat->ncols; ++j) {
         size_t i;
-        for (i = 0; i < inmat->nrows; ++i)
-            outmat[j * nrows + i] = (*ptxt)[i];
+        auto row_i = outmat;
+        for (i = 0; i < inmat->nrows; ++i, row_i += ncols)
+            row_i[j] = (*ptxt)[i];
         ++j;
-        for (size_t pi = ptxt_rows; i < inmat->nrows; ++i, ++pi)
-            outmat[j * nrows + i] = (*ptxt)[pi];
+        i = 0;
+        row_i = outmat;
+        for (size_t pi = ptxt_rows; i < inmat->nrows; ++i, ++pi, row_i += ncols)
+            row_i[j] = (*ptxt)[pi];
         ++ptxt;
     }
 }

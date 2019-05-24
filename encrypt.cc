@@ -23,13 +23,13 @@ encode_left_matrix(const int64_t *rowmat, size_t nrows, size_t ncols, seal::Batc
     assert(nrows <= half_slot_count);
 
     vector<seal::Plaintext> ptxts(ncols);
-    vector<int64_t> ptxt(2 * nrows);
+    vector<int64_t> ptxt(encoder.slot_count(), 0L);
     for (size_t j = 0; j < ncols; ++j) {
         size_t cidx = j; // target column index
         auto row = rowmat;
         for (size_t i = 0; i < nrows; ++i, row += ncols) {
             ptxt[i] = row[cidx];
-            ptxt[i + nrows] = ptxt[i]; // both columns are the same
+            ptxt[i + half_slot_count] = ptxt[i]; // both columns are the same
             // cidx == (i + j) % ncols
             if (++cidx == ncols)
                 cidx = 0;
