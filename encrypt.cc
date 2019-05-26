@@ -66,16 +66,17 @@ encode_right_matrix(const int64_t *colmat, size_t nrows, size_t ncols, seal::Bat
 
     size_t half_slot_count = encoder.slot_count() / 2;
     // TODO: Relax this restriction
-    assert(half_slot_count % nrows == 0);
-    // How many columnt repetitions must we do to fill the plaintext:
+    //assert(half_slot_count % nrows == 0);
+
+    // How many column repetitions must we do to fill the plaintext:
     size_t reps_per_col = half_slot_count / nrows;
 
     size_t i = 0, nptxts = (ncols + 1) / 2; // ceil(ncols / 2.0)
     vector<seal::Plaintext> ptxts(nptxts);
 
     // Iterate over the columns of colmat, two at a time.
-    vector<int64_t> ptxt(2 * nrows * reps_per_col);
-    auto halfway = ptxt.begin() + nrows * reps_per_col;
+    vector<int64_t> ptxt(2 * half_slot_count);
+    auto halfway = ptxt.begin() + half_slot_count;
     auto end = colmat + nrows * ncols;
     for (auto col = colmat; col < end; col += 2*nrows, ++i) {
         auto col1 = col, col2 = col1 + nrows;
