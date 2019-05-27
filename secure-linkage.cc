@@ -111,19 +111,20 @@ check_result(string pre,
 }
 
 int main() {
-    std::uint64_t plain_mod = 40961;
-    std::size_t poldeg = 4096;
-    int nclks = poldeg / 2;
-    int clksz = 512;
+    uint64_t plain_mod = 40961;
+    size_t poldeg = 4096;
+    size_t nclks = poldeg / 2;
+    size_t clksz = 512;
 
     vector<int64_t> Linmat(nclks * clksz);
-    for (int i = 0; i < nclks * clksz; ++i) {
+    for (size_t i = 0; i < nclks * clksz; ++i) {
         Linmat[i] = (i*17 % 31) & 1;
     }
+    // Just use first two rows of Linmat as the two columns of Rinmat.
     vector<int64_t> &Rinmat = Linmat;
+
     int nrows = nclks;
     //int ncols = clksz;
-
 
     /* Context */
     seclink_ctx_t ctx;
@@ -160,7 +161,7 @@ int main() {
     vector<vector<int64_t>> clks;
     clks.reserve(nclks);
     auto iter = Linmat.begin();
-    for (int i = 0; i < nclks; ++i) {
+    for (size_t i = 0; i < nclks; ++i) {
         clks.emplace_back(iter, iter + clksz);
         iter += clksz;
     }
