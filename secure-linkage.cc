@@ -20,14 +20,13 @@ typedef std::vector<int64_t> CLK;
 vector<int64_t>
 mat_vec_prod(const vector<CLK> &clks) {
     vector<int64_t> res;
-    CLK vec;
 
-    vec= clks[0];
-    for (auto &clk : clks)
-        res.push_back(inner_product(begin(clk), end(clk), begin(vec), 0L));
-    vec = clks[1];
-    for (auto &clk : clks)
-        res.push_back(inner_product(begin(clk), end(clk), begin(vec), 0L));
+    const auto &row1 = clks[0];
+    const auto &row2 = clks[1];
+    for (auto &clk : clks) {
+        res.push_back(inner_product(begin(clk), end(clk), begin(row1), 0L));
+        res.push_back(inner_product(begin(clk), end(clk), begin(row2), 0L));
+    }
     return res;
 }
 
