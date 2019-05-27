@@ -157,10 +157,12 @@ def decrypt(ctx, inmat, skey):
     return outmat
 
 
-# nrows = 2048  # maximum allowable at the moment
-# ncols = 512   # 'BF length'
-# maxval = 2    # maximum vector element value + 1; 2 => bit vectors
-def run_test(left_rows = 2048, left_cols = 512, right_cols = 2, maxval = 2, log = lambda *args: None):
+def run_test(
+        left_rows = 2048, # maximum allowable at the moment
+        left_cols = 512,  # 'BF length'
+        right_cols = 2,
+        maxval = 2,       # maximum vector element value + 1; 2 => bit vectors
+        log = lambda *args, **kwargs: None):
     assert left_rows > 0 and left_cols > 0 and right_cols > 0, 'dimensions must be positive'
     right_rows = left_cols
 

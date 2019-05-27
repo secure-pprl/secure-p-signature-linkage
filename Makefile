@@ -1,4 +1,4 @@
-LIBSEAL_PATH = /usr/local/lib/libseal.a
+LIBSEAL_PATH ?= /usr/local/lib/libseal.a
 
 OPTFLAGS = -O3 -fomit-frame-pointer -fno-strict-aliasing
 DBGFLAGS = -O0 -ggdb3
