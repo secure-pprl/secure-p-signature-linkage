@@ -1,8 +1,9 @@
 # secure-p-signature-linkage
 
 This code currently demonstrates secure matrix multiplication using
-the systolic matrix encoding. It is based on
-[SEAL](https://github.com/Microsoft/SEAL).
+the systolic matrix encoding. A talk by the author describing the mathematical 
+background can be seen [here](https://www.youtube.com/watch?v=kFoShXMxYCY).
+[SEAL](https://github.com/Microsoft/SEAL) is used for homomorphic encryption.
 
 
 ## Prerequisites
