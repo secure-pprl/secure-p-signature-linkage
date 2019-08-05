@@ -24,7 +24,8 @@ void seclink_init_ctx(seclink_ctx_t *ctx,
         std::make_shared<seal::FastPRNGFactory>(seed[0], seed[1]));
 
     params.set_poly_modulus_degree(polmod_deg);
-    params.set_coeff_modulus(seal::DefaultParams::coeff_modulus_128(polmod_deg));
+    params.set_coeff_modulus(seal::CoeffModulus::BFVDefault(polmod_deg));
+    // params.set_plain_modulus(seal::PlainModulus::Batching(plain_mod));
     params.set_plain_modulus(plain_mod);
 
     *ctx = new seclink_ctx(seal::SEALContext::Create(params));
@@ -69,8 +70,8 @@ save_key_data(
 void seclink_keygen(const seclink_ctx_t ctx,
         char **public_key_arr, size_t *public_key_bytes,
         char **secret_key_arr, size_t *secret_key_bytes,
-        char **galois_keys_arr, size_t *galois_keys_bytes, int galois_key_bits,
-        char **relin_keys_arr, size_t *relin_keys_bytes, int relin_key_bits)
+        char **galois_keys_arr, size_t *galois_keys_bytes,
+        char **relin_keys_arr, size_t *relin_keys_bytes)
 {
     seal::KeyGenerator keygen(ctx->context);
 
@@ -85,13 +86,13 @@ void seclink_keygen(const seclink_ctx_t ctx,
     auto secret_key = keygen.secret_key();
     save_key_data(secret_key, secret_key_arr, secret_key_bytes, scratch);
 
-    if (galois_keys_arr && galois_keys_bytes && galois_key_bits > 0) {
-        auto galois_keys = keygen.galois_keys(galois_key_bits);
+    if (galois_keys_arr && galois_keys_bytes) {
+        auto galois_keys = keygen.galois_keys();
         save_key_data(galois_keys, galois_keys_arr, galois_keys_bytes, scratch);
     }
 
-    if (relin_keys_arr && relin_keys_bytes && relin_key_bits > 0) {
-        auto relin_keys = keygen.relin_keys(relin_key_bits);
+    if (relin_keys_arr && relin_keys_bytes) {
+        auto relin_keys = keygen.relin_keys();
         save_key_data(relin_keys, relin_keys_arr, relin_keys_bytes, scratch);
     }
 }

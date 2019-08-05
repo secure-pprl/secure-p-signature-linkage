@@ -41,7 +41,7 @@ void print_parameters(shared_ptr<SEALContext> context)
     {
         throw invalid_argument("context is not set");
     }
-    auto &context_data = *context->context_data();
+    auto &context_data = *context->first_context_data();
 
     /*
     Which scheme are we using?
@@ -79,8 +79,8 @@ void print_parameters(shared_ptr<SEALContext> context)
             parms().plain_modulus().value() << endl;
     }
 
-    cout << "\\ noise_standard_deviation: " << context_data.
-        parms().noise_standard_deviation() << endl;
+    cout << "\\ noise_standard_deviation: "
+         << seal::util::global_variables::noise_standard_deviation << endl;
     cout << endl;
 }
 
@@ -135,9 +135,8 @@ int main() {
     /* Key generation */
     char *pubkey, *seckey, *galkeys;
     size_t pubkeybytes, seckeybytes, galkeysbytes;
-    int galkey_bits = 30;
     seclink_keygen(ctx, &pubkey, &pubkeybytes, &seckey, &seckeybytes,
-            &galkeys, &galkeysbytes, galkey_bits, 0, 0, 0);
+            &galkeys, &galkeysbytes, 0, 0);
 
     seclink_emat_t left, right, prod;
 

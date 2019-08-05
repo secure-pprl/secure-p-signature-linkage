@@ -22,8 +22,8 @@ void seclink_clear_ctx(seclink_ctx_t ctx);
 void seclink_keygen(const seclink_ctx_t ctx,
         char **public_key, size_t *public_key_bytes,
         char **secret_key, size_t *secret_key_bytes,
-        char **galois_keys, size_t *galois_keys_bytes, int galois_key_bits,
-        char **relin_keys, size_t *relin_keys_bytes, int relin_key_bits);
+        char **galois_keys, size_t *galois_keys_bytes,
+        char **relin_keys, size_t *relin_keys_bytes);
 
 void seclink_clear_key(char *key);
 

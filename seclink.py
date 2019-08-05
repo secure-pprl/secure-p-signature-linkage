@@ -21,8 +21,8 @@ void seclink_clear_ctx(seclink_ctx_t ctx);
 void seclink_keygen(const seclink_ctx_t ctx,
         char **public_key, size_t *public_key_bytes,
         char **secret_key, size_t *secret_key_bytes,
-        char **galois_keys, size_t *galois_keys_bytes, int galois_key_bits,
-        char **relin_keys, size_t *relin_keys_bytes, int relin_key_bits);
+        char **galois_keys, size_t *galois_keys_bytes,
+        char **relin_keys, size_t *relin_keys_bytes);
 
 void seclink_clear_key(char *key);
 
@@ -80,7 +80,7 @@ def keygen(ctx):
     gkey = ffi.new('char **'); glen = ffi.new('size_t *')
     rkey = ffi.new('char **'); rlen = ffi.new('size_t *')
 
-    lib.seclink_keygen(ctx, pkey, plen, skey, slen, gkey, glen, 30, rkey, rlen, 30)
+    lib.seclink_keygen(ctx, pkey, plen, skey, slen, gkey, glen, rkey, rlen)
 
     pkey_ = key_to_bytes(pkey, plen)
     skey_ = key_to_bytes(skey, slen)
