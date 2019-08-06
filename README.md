@@ -1,9 +1,11 @@
 # secure-p-signature-linkage
 
-This code currently demonstrates secure matrix multiplication using
-the systolic matrix encoding. A talk by the author describing the mathematical 
-background can be seen [here](https://www.youtube.com/watch?v=kFoShXMxYCY).
-[SEAL](https://github.com/Microsoft/SEAL) is used for homomorphic encryption.
+This code demonstrates secure matrix multiplication using the systolic
+matrix encoding. A talk by the author describing the mathematical
+background can be seen
+[here](https://www.youtube.com/watch?v=kFoShXMxYCY).
+[SEAL](https://github.com/Microsoft/SEAL) is used for homomorphic
+encryption.
 
 
 ## Prerequisites
@@ -83,3 +85,19 @@ cleaning up...
 ```
 See [here](https://github.com/secure-pprl/secure-p-signature-linkage/blob/master/secure-linkage.cc#L114)
 for what the code is doing.
+
+## Docker
+
+A Dockerfile is provided and can be used to build a Docker image in the usual way. A prebuilt Docker image, which runs `seclink.run_test()` as above and leaves the user in the Python session, is available by running
+```
+$ docker run --rm -it data61/secure-pprl:latest
+```
+Note that running the code through Docker will result in a performance decrease of about 10% compared to running natively.
+
+## Author and licence
+
+The principal author of `secure-p-signature-linkage` and the associated research is Dr Hamish Ivey-Law (@unzvfu). Email: _hamish.ivey-law (at) data61.csiro.au_
+
+`secure-p-signature-linkage` is copyright (c) Commonwealth Scientific and Industrial Research Organisation (CSIRO).
+
+`secure-p-signature-linkage` is released under the Apache Licence Version 2.0 (see [LICENCE](LICENCE) for details).
