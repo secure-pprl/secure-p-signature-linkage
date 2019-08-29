@@ -1,7 +1,7 @@
 # Stage 1: Building
-FROM alpine:3.10.1 AS build
+FROM alpine:3.10.2 AS build
 # Build tools
-RUN apk update && apk upgrade && apk add --no-cache git g++ make cmake
+RUN apk add --no-cache git g++ make cmake
 # Build SEAL & spsl
 RUN mkdir /building && cd /building && \
     git clone https://github.com/microsoft/SEAL.git && cd SEAL/native/src && \
@@ -11,10 +11,9 @@ RUN mkdir /building && cd /building && \
     CPPFLAGS='-isystem /building/SEAL/native/src' LIBSEAL_PATH=/building/SEAL/native/lib/libseal.a make -j8
 
 # Stage 2: Deployment
-FROM alpine:3.10.1 AS deploy
+FROM alpine:3.10.2 AS deploy
 # Library packages required for running
-RUN apk update && apk upgrade && \
-    apk add --no-cache python3 py3-cffi py3-numpy libstdc++ libgomp
+RUN apk add --no-cache python3 py3-cffi py3-numpy libstdc++ libgomp
 # Brings over essential SEAL source and SPPRL systems
 COPY --from=build /building/SEAL/native/src/seal /building/SEAL/native/src/seal
 COPY --from=build /building/secure-p-signature-linkage /building/secure-p-signature-linkage
