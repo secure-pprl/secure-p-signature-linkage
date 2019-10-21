@@ -4,7 +4,7 @@ FROM alpine:3.10.2 AS build
 RUN apk add --no-cache git g++ make cmake
 # Build SEAL & spsl
 RUN mkdir /building && cd /building && \
-    git clone https://github.com/microsoft/SEAL.git && cd SEAL/native/src && \
+    git clone --single-branch --branch 3.3.1 https://github.com/microsoft/SEAL.git && cd SEAL/native/src && \
     cmake . && make -j8 && cd /building && \
     git clone https://github.com/secure-pprl/secure-p-signature-linkage.git && \
     cd secure-p-signature-linkage/ && \
