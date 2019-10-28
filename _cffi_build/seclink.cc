@@ -1,8 +1,8 @@
 #include <sstream>
 #include <cassert>
 
-#include "memstream.h"
-#include "seclink_internal.h"
+#include <memstream.h>
+#include <seclink_internal.h>
 
 void seclink_init_ctx(seclink_ctx_t *ctx,
         size_t polmod_deg, uint64_t plain_mod,
