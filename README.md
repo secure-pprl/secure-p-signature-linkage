@@ -101,3 +101,17 @@ The principal author of `secure-p-signature-linkage` and the associated research
 `secure-p-signature-linkage` is copyright (c) Commonwealth Scientific and Industrial Research Organisation (CSIRO).
 
 `secure-p-signature-linkage` is released under the Apache Licence Version 2.0 (see [LICENCE](LICENCE) for details).
+
+
+## Python Wheel Creation from Docker Container
+
+The docker container described in `DockerfileLinuxWheelCreation` pulls a lot of libraries and things, to create a
+wheel file which can be installed. It still requires SEAL to be **installed** (not only available).
+Note that SEAL version **must be** 3.3.1. 
+
+To use:
+    docker build . -f DockerfileLinuxWheelCreation -t ${nameofmyimage}
+    docker run -it -u $(id -u ${USER}):$(id -g ${USER}) -v ${folderpath}:/result ${nameofmyimage}
+    
+The image creates a wheel and stores it in the folder `/result`. Running the container copy the wheel into the folder
+`${folderpath}`.
