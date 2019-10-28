@@ -1,0 +1,10 @@
+recursive-include _cffi_build *
+
+# Include Cython code
+global-include *.pyx
+global-include *.pxd
+include _cffi_build/memstream.h
+
+graft _cffi_build/
+global-include *.h
+global-include *.cc
