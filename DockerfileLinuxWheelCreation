@@ -1,0 +1,17 @@
+# Stage 1: Building
+FROM alpine:3.10.2 AS build
+# Build tools
+RUN apk add --no-cache git g++ make cmake patchelf
+ADD ./ /building/secure-p-signature-linkage/
+# Build SEAL & spsl
+RUN cd /building && \
+    git clone --single-branch --branch 3.3.1 https://github.com/microsoft/SEAL.git && cd SEAL/native/src && \
+    cmake . && make install -j8
+RUN apk add --no-cache python3 py3-cffi py3-numpy python3-dev libstdc++ libgomp
+RUN cd /building/secure-p-signature-linkage/ && \
+    python3 -m pip install auditwheel && \
+    python3 setup.py bdist_wheel && \
+    python3 -m auditwheel repair dist/*.whl && \
+    mkdir /result
+
+CMD ["cp", "-r", "/building/secure-p-signature-linkage/dist/", "/result/"]
