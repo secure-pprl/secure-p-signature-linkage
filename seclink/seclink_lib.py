@@ -4,6 +4,8 @@ import time
 
 from seclink._libseclink import ffi, lib
 
+lib = ffi.dlopen(None)
+
 def create_ctx(poldeg = 4096, plain_mod = 40961):
     def clear_ctx(ctx):
         lib.seclink_clear_ctx(ctx[0])

@@ -17,7 +17,9 @@ ffibuilder.set_source(
     source_extension='.cc',
     extra_compile_args=['-Wall', '-Wextra', '-std=gnu++17', '-O3'],
     include_dirs=["./", "_cffi_build/"],
-
+    libraries=['seal'],
+    sources=['_cffi_build/encrypt.cc', '_cffi_build/decrypt.cc', '_cffi_build/multiply.cc',
+             '_cffi_build/secure-linkage.cc']
 )
 
 ffibuilder.cdef("""
