@@ -1,17 +1,23 @@
-# Stage 1: Building
-FROM alpine:3.10.2 AS build
-# Build tools
-RUN apk add --no-cache git g++ make cmake patchelf
-ADD ./ /building/secure-p-signature-linkage/
-# Build SEAL & spsl
-RUN cd /building && \
+# Stage 1: Preparing image having SEAL
+FROM alpine:3.10.2 AS buildseal
+RUN apk add --no-cache git g++ make cmake patchelf libstdc++ libgomp python3 py3-cffi py3-numpy python3-dev
+# Build SEAL
+RUN mkdir /building && \
+    cd /building && \
     git clone --single-branch --branch 3.3.1 https://github.com/microsoft/SEAL.git && cd SEAL/native/src && \
     cmake . && make install -j8
-RUN apk add --no-cache python3 py3-cffi py3-numpy python3-dev libstdc++ libgomp
-RUN cd /building/secure-p-signature-linkage/ && \
-    python3 -m pip install auditwheel && \
-    python3 setup.py bdist_wheel && \
-    python3 -m auditwheel repair dist/*.whl && \
-    mkdir /result
 
-CMD ["cp", "-r", "/building/secure-p-signature-linkage/dist/", "/result/"]
+# Stage 2: Build python wheel
+FROM buildseal AS buildwheel
+RUN python3 -m pip install auditwheel
+ADD ./ /building/secure-p-signature-linkage/
+RUN cd /building/secure-p-signature-linkage/ && \
+    python3 setup.py bdist_wheel && \
+    python3 -m auditwheel repair dist/*.whl
+
+# Stage 3: test the wheel
+FROM buildseal AS tester
+COPY --from=buildwheel /building/secure-p-signature-linkage/dist /building/dist
+RUN python3 -m pip install /building/dist/*.whl && \
+    python3 -c "from seclink import seclink_lib;  seclink_lib.run_test(log = print)"
+CMD ["cp", "-r", "/building/dist", "/result/"]
