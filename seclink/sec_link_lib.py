@@ -2,9 +2,7 @@ import weakref
 import numpy as np
 import time
 
-from seclink._truc import ffi, lib
-
-lib = ffi.dlopen(None)
+from seclink._libseclink import ffi, lib
 
 def create_ctx(poldeg = 4096, plain_mod = 40961):
     def clear_ctx(ctx):

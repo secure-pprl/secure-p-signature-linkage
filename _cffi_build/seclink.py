@@ -12,7 +12,7 @@ with open(sourcefile, 'r') as f:
 
 
 ffibuilder.set_source(
-    "_truc",
+    "_libseclink",
     source,
     source_extension='.cc',
     extra_compile_args=['-Wall', '-Wextra', '-std=gnu++17', '-O3'],
