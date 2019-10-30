@@ -6,7 +6,7 @@ CXXFLAGS += $(DBGFLAGS) -Wall -Wextra -pedantic -std=gnu++17 -fPIC -DPIC -fopenm
 #CPPFLAGS = -Ipath/to/seal.h
 LDFLAGS = -fopenmp -pthread
 
-LIB_OBJS = seclink.o encrypt.o decrypt.o multiply.o
+LIB_OBJS = seclink.o encrypt.o decrypt.o multiply.o memstream.o
 LIB = libseclink.so
 EXE_OBJS = secure-linkage.o
 EXE = secure-linkage
